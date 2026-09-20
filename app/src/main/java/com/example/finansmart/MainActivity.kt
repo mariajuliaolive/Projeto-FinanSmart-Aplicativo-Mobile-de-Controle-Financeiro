@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import com.example.finansmart.ui.screens.splash.SplashScreen
+import com.example.finansmart.ui.screens.login.LoginScreen
 import com.example.finansmart.ui.theme.FinanSmartTheme
 
 class MainActivity : ComponentActivity() {
@@ -18,12 +18,10 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             FinanSmartTheme {
-                SplashScreen(
-                    onTerminou = {
-                        // Etapa 5: aqui vai a navegacao para a tela de Login.
-                        // Por enquanto a barra enche e a tela fica parada.
-                    }
-                )
+                LoginScreen()
+
+
+
             }
         }
     }
