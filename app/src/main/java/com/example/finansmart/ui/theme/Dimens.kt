@@ -41,7 +41,8 @@ object Dimens {
     val RadiusPill       = 99.dp  // totalmente redondo (avatar, barra de progresso)
 
     /* --- margens laterais da tela --- */
-    val ScreenPaddingAuth = 28.dp  // splash, login, cadastro
+    val ScreenPaddingSplash = 44.dp  // splash
+    val ScreenPaddingAuth   = 28.dp  // login, cadastro
     val ScreenPadding     = 20.dp  // telas internas
 
     /* --- espacos entre elementos --- */
@@ -50,6 +51,7 @@ object Dimens {
     val Space12 = 12.dp
     val Space16 = 16.dp
     val Space18 = 18.dp
+    val Space20 = 20.dp
     val Space22 = 22.dp
     val Space26 = 26.dp
     val Space32 = 32.dp
