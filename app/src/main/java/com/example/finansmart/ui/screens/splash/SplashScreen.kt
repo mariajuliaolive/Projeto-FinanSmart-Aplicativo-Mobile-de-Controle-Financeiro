@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,6 +28,7 @@ import androidx.core.view.WindowCompat
 import androidx.compose.material3.Text
 import com.example.finansmart.ui.theme.Dimens
 import com.example.finansmart.ui.theme.FinanSmartTheme
+import androidx.compose.runtime.DisposableEffect
 
 /*
  * TELA 01 - SPLASH
@@ -173,13 +173,24 @@ private fun LogoFinanSmart() {
 }
 
 /* Deixa relogio, bateria e sinal em branco enquanto esta tela esta visivel. */
+/* Deixa relogio, bateria e sinal em branco enquanto esta tela esta visivel,
+   e devolve ao padrao do tema quando a tela sai. */
 @Composable
 private fun ForcarIconesClarosNaStatusBar() {
     val view = LocalView.current
+    val temaEscuro = FinanSmartTheme.colors.isDark
     if (view.isInEditMode) return
-    SideEffect {
-        val janela = view.context.acharActivity()?.window ?: return@SideEffect
-        WindowCompat.getInsetsController(janela, view).isAppearanceLightStatusBars = false
+
+    DisposableEffect(temaEscuro) {
+        val janela = view.context.acharActivity()?.window
+        val controle = janela?.let { WindowCompat.getInsetsController(it, view) }
+
+        controle?.isAppearanceLightStatusBars = false
+
+        onDispose {
+            // Tema claro -> ícones escuros. Tema escuro -> ícones claros.
+            controle?.isAppearanceLightStatusBars = !temaEscuro
+        }
     }
 }
 

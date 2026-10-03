@@ -122,6 +122,7 @@ fun LoginScreen(
 
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 BotaoSecundario("🔵 Google", aoClicar = {}, modifier = Modifier.weight(1f))
+                // Não faz sentido esse botão de Face Id
                 BotaoSecundario("🆔 Face ID", aoClicar = {}, modifier = Modifier.weight(1f))
             }
 
