@@ -1,52 +1,219 @@
 package com.example.finansmart.ui.navigation
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.example.finansmart.ui.screens.cadastro.CadastroScreen
+import com.example.finansmart.ui.screens.config.ConfiguracoesScreen
+import com.example.finansmart.ui.screens.config.PerfilScreen
+import com.example.finansmart.ui.screens.dashboard.DashboardScreen
 import com.example.finansmart.ui.screens.login.LoginScreen
+import com.example.finansmart.ui.screens.metas.MetasScreen
+import com.example.finansmart.ui.screens.metas.NovaMetaScreen
+import com.example.finansmart.ui.screens.relatorios.RelatoriosScreen
 import com.example.finansmart.ui.screens.splash.SplashScreen
+import com.example.finansmart.ui.screens.transacoes.DetalheTransacaoScreen
+import com.example.finansmart.ui.screens.transacoes.NovaTransacaoScreen
+import com.example.finansmart.ui.screens.transacoes.TransacoesScreen
+import com.example.finansmart.ui.theme.FinanSmartTheme
 
 /**
- * O mapa do aplicativo: quais telas existem e o que cada
- * botão faz quando é tocado.
+ * O mapa do aplicativo: quais telas existem e o que cada botão faz.
+ *
+ * As telas não sabem para onde levam. Elas avisam ("clicaram em Entrar")
+ * e é aqui que se decide o destino. Por isso a navegação inteira cabe
+ * num arquivo só, e as telas continuam independentes.
  */
 @Composable
 fun FinanSmartNavHost() {
-
-    // Guarda em que tela estamos e sabe levar para outra.
     val navController = rememberNavController()
 
-    NavHost(
-        navController = navController,
-        startDestination = Rotas.SPLASH
-    ) {
+    // Qual rota está na tela agora -- usado para acender a aba certa.
+    val entradaAtual by navController.currentBackStackEntryAsState()
+    val rotaAtual = entradaAtual?.destination?.route
 
-        composable(Rotas.SPLASH) {
-            SplashScreen(
-                onTerminou = {
-                    navController.navigate(Rotas.LOGIN) {
-                        // Tira a Splash da pilha: depois de sair dela, o
-                        // botão Voltar do celular não deve trazê-la de volta.
-                        popUpTo(Rotas.SPLASH) { inclusive = true }
-                    }
-                }
-            )
+    val mostrarAbas = rotaAtual in ROTAS_COM_ABAS
+
+    Scaffold(
+        containerColor = FinanSmartTheme.colors.bg,
+        bottomBar = {
+            if (mostrarAbas) {
+                BarraNavegacaoInferior(
+                    rotaAtual = rotaAtual,
+                    aoSelecionar = { rota -> irParaAba(navController, rota) }
+                )
+            }
         }
+    ) { espacoDasAbas ->
 
-        composable(Rotas.LOGIN) {
-            LoginScreen(
-                onEntrar = {
-                    // Etapa 8: leva ao Dashboard, quando ele existir.
-                },
-                onCriarConta = {
-                    // Etapa 7: leva ao Cadastro, a próxima tela que faremos.
-                },
-                onEsqueciSenha = {
-                    // Não existe como tela no protótipo. Sem ação por ora.
-                }
-            )
+        NavHost(
+            navController = navController,
+            startDestination = Rotas.SPLASH,
+            modifier = Modifier
+                .fillMaxSize()
+                .background(FinanSmartTheme.colors.bg)
+        ) {
+
+            /* ---------- entrada ---------- */
+
+            composable(Rotas.SPLASH) {
+                SplashScreen(
+                    onTerminou = {
+                        navController.navigate(Rotas.LOGIN) {
+                            // Tira a Splash da pilha: o Voltar não deve traze-la de novo.
+                            popUpTo(Rotas.SPLASH) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            composable(Rotas.LOGIN) {
+                LoginScreen(
+                    onEntrar = { entrarNoApp(navController) },
+                    onCriarConta = { navController.navigate(Rotas.CADASTRO) },
+                    onEsqueciSenha = { /* Não existe como tela no protótipo. */ }
+                )
+            }
+
+            composable(Rotas.CADASTRO) {
+                CadastroScreen(
+                    onVoltar = { navController.popBackStack() },
+                    onCriarConta = { entrarNoApp(navController) }
+                )
+            }
+
+            /* ---------- as 5 abas ---------- */
+
+            composable(Rotas.DASHBOARD) {
+                DashboardScreen(
+                    onNovaTransacao = { navController.navigate(Rotas.NOVA_TRANSACAO) },
+                    onVerTodas = { irParaAba(navController, Rotas.TRANSACOES) },
+                    onAbrirTransacao = { id ->
+                        navController.navigate(Rotas.detalheTransacao(id))
+                    },
+                    modifier = Modifier.padding(espacoDasAbas).safeDrawingPadding()
+                )
+            }
+
+            composable(Rotas.TRANSACOES) {
+                TransacoesScreen(
+                    onNovaTransacao = { navController.navigate(Rotas.NOVA_TRANSACAO) },
+                    onAbrirTransacao = { id ->
+                        navController.navigate(Rotas.detalheTransacao(id))
+                    },
+                    modifier = Modifier.padding(espacoDasAbas).safeDrawingPadding()
+                )
+            }
+
+            composable(Rotas.RELATORIOS) {
+                RelatoriosScreen(
+                    modifier = Modifier.padding(espacoDasAbas).safeDrawingPadding()
+                )
+            }
+
+            composable(Rotas.METAS) {
+                MetasScreen(
+                    onNovaMeta = { navController.navigate(Rotas.NOVA_META) },
+                    modifier = Modifier.padding(espacoDasAbas).safeDrawingPadding()
+                )
+            }
+
+            composable(Rotas.CONFIGURACOES) {
+                ConfiguracoesScreen(
+                    onAbrirPerfil = { navController.navigate(Rotas.PERFIL) },
+                    onSair = {
+                        navController.navigate(Rotas.LOGIN) {
+                            // Limpa tudo: sair da conta não deve deixar
+                            // nenhuma tela do app logado na pilha.
+                            popUpTo(0) { inclusive = true }
+                        }
+                    },
+                    modifier = Modifier.padding(espacoDasAbas).safeDrawingPadding()
+                )
+            }
+
+            /* ---------- telas abertas a partir das abas ---------- */
+
+            composable(Rotas.NOVA_TRANSACAO) {
+                NovaTransacaoScreen(
+                    onVoltar = { navController.popBackStack() },
+                    onSalvou = { navController.popBackStack() },
+                    modifier = Modifier.safeDrawingPadding()
+                )
+            }
+
+            composable(Rotas.NOVA_META) {
+                NovaMetaScreen(
+                    onVoltar = { navController.popBackStack() },
+                    onCriou = { navController.popBackStack() },
+                    modifier = Modifier.safeDrawingPadding()
+                )
+            }
+
+            composable(Rotas.PERFIL) {
+                PerfilScreen(
+                    onVoltar = { navController.popBackStack() },
+                    modifier = Modifier.safeDrawingPadding()
+                )
+            }
+
+            composable(
+                route = Rotas.DETALHE_TRANSACAO,
+                arguments = listOf(navArgument("id") { type = NavType.LongType })
+            ) { entrada ->
+                // O id veio dentro do endereço: "detalhe_transacao/7".
+                val id = entrada.arguments?.getLong("id") ?: 0L
+                DetalheTransacaoScreen(
+                    transacaoId = id,
+                    onVoltar = { navController.popBackStack() },
+                    onExcluiu = { navController.popBackStack() }
+                )
+            }
         }
     }
 }
 
+/** As telas que mostram a barra de 5 abas no rodapé. */
+private val ROTAS_COM_ABAS = setOf(
+    Rotas.DASHBOARD,
+    Rotas.TRANSACOES,
+    Rotas.RELATORIOS,
+    Rotas.METAS,
+    Rotas.CONFIGURACOES,
+)
+
+/**
+ * Troca de aba sem empilhar.
+ *
+ * Sem isso, ir Início -> Metas -> Início -> Metas deixaria quatro telas
+ * na pilha, e o Voltar teria que desfazer uma a uma. Com launchSingleTop
+ * e popUpTo no Dashboard, a pilha fica sempre curta e o Voltar leva ao
+ * Início, como a pessoa espera.
+ */
+private fun irParaAba(navController: NavHostController, rota: String) {
+    navController.navigate(rota) {
+        popUpTo(Rotas.DASHBOARD) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+/** Entrar pelo Login ou pelo Cadastro leva ao Dashboard, sem volta. */
+private fun entrarNoApp(navController: NavHostController) {
+    navController.navigate(Rotas.DASHBOARD) {
+        popUpTo(0) { inclusive = true }
+    }
+}
