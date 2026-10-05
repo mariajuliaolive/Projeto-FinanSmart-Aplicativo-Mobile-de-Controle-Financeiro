@@ -1,8 +1,5 @@
 package com.example.finansmart.ui.screens.splash
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -19,16 +16,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import androidx.compose.material3.Text
+import com.example.finansmart.ui.components.ForcarIconesClarosNaStatusBar
 import com.example.finansmart.ui.theme.Dimens
 import com.example.finansmart.ui.theme.FinanSmartTheme
-import androidx.compose.runtime.DisposableEffect
 
 /*
  * TELA 01 - SPLASH
@@ -172,33 +167,6 @@ private fun LogoFinanSmart() {
     }
 }
 
-/* Deixa relogio, bateria e sinal em branco enquanto esta tela esta visivel. */
-/* Deixa relogio, bateria e sinal em branco enquanto esta tela esta visivel,
-   e devolve ao padrao do tema quando a tela sai. */
-@Composable
-private fun ForcarIconesClarosNaStatusBar() {
-    val view = LocalView.current
-    val temaEscuro = FinanSmartTheme.colors.isDark
-    if (view.isInEditMode) return
-
-    DisposableEffect(temaEscuro) {
-        val janela = view.context.acharActivity()?.window
-        val controle = janela?.let { WindowCompat.getInsetsController(it, view) }
-
-        controle?.isAppearanceLightStatusBars = false
-
-        onDispose {
-            // Tema claro -> ícones escuros. Tema escuro -> ícones claros.
-            controle?.isAppearanceLightStatusBars = !temaEscuro
-        }
-    }
-}
-
-private tailrec fun Context.acharActivity(): Activity? = when (this) {
-    is Activity -> this
-    is ContextWrapper -> baseContext.acharActivity()
-    else -> null
-}
 
 @Preview(showBackground = true, widthDp = 390, heightDp = 844)
 @Composable

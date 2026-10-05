@@ -3,6 +3,7 @@ package com.example.finansmart.ui.navigation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -38,12 +39,17 @@ fun BarraNavegacaoInferior(
 ) {
     val c = FinanSmartTheme.colors
 
-    Column(modifier.fillMaxWidth().background(c.surface)) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            .background(c.surface)
+            .navigationBarsPadding()   // fica ACIMA dos botoes do sistema
+    ) {
         if (mostrarDivisoria) Divisoria()
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 8.dp, end = 8.dp, top = 10.dp, bottom = 18.dp)
+                .padding(start = 2.dp, end = 2.dp, top = 10.dp, bottom = 18.dp)
         ) {
             Aba.entries.forEach { aba ->
                 val ativa = rotaAtual == aba.rota
@@ -68,7 +74,9 @@ fun BarraNavegacaoInferior(
                     Text(
                         text = aba.rotulo,
                         style = FinanSmartTheme.type.NavLabel.copy(
-                            fontWeight = if (ativa) FontWeight.SemiBold else FontWeight.Medium
+                            fontWeight = if (ativa) FontWeight.SemiBold else FontWeight.Medium,
+                            fontSize = 9.5.sp,
+                            letterSpacing = (-0.2).sp
                         ),
                         color = if (ativa) c.primaryInk else c.ink3,
                         textAlign = TextAlign.Center,

@@ -19,8 +19,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.finansmart.data.*
 import com.example.finansmart.ui.components.Cartao
 import com.example.finansmart.ui.components.MarcadorDeLegenda
@@ -93,7 +95,7 @@ fun RelatoriosScreen(modifier: Modifier = Modifier) {
                     fatias = porCategoria,
                     total = despesas,
                     corDoMiolo = c.surface,
-                    modifier = Modifier.size(104.dp)
+                    modifier = Modifier.size(96.dp)
                 )
                 Spacer(Modifier.width(Dimens.Space18))
                 Column(
@@ -111,9 +113,11 @@ fun RelatoriosScreen(modifier: Modifier = Modifier) {
                                     Spacer(Modifier.width(6.dp))
                                     Text(
                                         text = categoria.rotulo,
-                                        style = t.Rotulo115,
+                                        style = t.Rotulo11,
                                         color = c.ink,
-                                        maxLines = 1
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Visible,
+                                        softWrap = false
                                     )
                                 }
                             }
@@ -306,7 +310,7 @@ private fun RoscaDeCategorias(
         }
         Box(
             Modifier
-                .size(70.dp)
+                .size(64.dp)
                 .clip(RoundedCornerShape(Dimens.RadiusPill))
                 .background(corDoMiolo),
             contentAlignment = Alignment.Center
@@ -322,9 +326,12 @@ private fun RoscaDeCategorias(
                 Text(
                     text = formatarMoedaCurta(total),
                     style = FinanSmartTheme.type.ListTitle.copy(
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        fontSize = 13.sp
                     ),
-                    color = c.ink
+                    color = c.ink,
+                    maxLines = 1,
+                    softWrap = false
                 )
             }
         }

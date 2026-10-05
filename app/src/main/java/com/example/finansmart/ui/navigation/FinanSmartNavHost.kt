@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -104,7 +105,7 @@ fun FinanSmartNavHost() {
                     onAbrirTransacao = { id ->
                         navController.navigate(Rotas.detalheTransacao(id))
                     },
-                    modifier = Modifier.padding(espacoDasAbas).safeDrawingPadding()
+                    modifier = Modifier.padding(espacoDasAbas).statusBarsPadding()
                 )
             }
 
@@ -114,20 +115,20 @@ fun FinanSmartNavHost() {
                     onAbrirTransacao = { id ->
                         navController.navigate(Rotas.detalheTransacao(id))
                     },
-                    modifier = Modifier.padding(espacoDasAbas).safeDrawingPadding()
+                    modifier = Modifier.padding(espacoDasAbas).statusBarsPadding()
                 )
             }
 
             composable(Rotas.RELATORIOS) {
                 RelatoriosScreen(
-                    modifier = Modifier.padding(espacoDasAbas).safeDrawingPadding()
+                    modifier = Modifier.padding(espacoDasAbas).statusBarsPadding()
                 )
             }
 
             composable(Rotas.METAS) {
                 MetasScreen(
                     onNovaMeta = { navController.navigate(Rotas.NOVA_META) },
-                    modifier = Modifier.padding(espacoDasAbas).safeDrawingPadding()
+                    modifier = Modifier.padding(espacoDasAbas).statusBarsPadding()
                 )
             }
 
@@ -141,7 +142,7 @@ fun FinanSmartNavHost() {
                             popUpTo(0) { inclusive = true }
                         }
                     },
-                    modifier = Modifier.padding(espacoDasAbas).safeDrawingPadding()
+                    modifier = Modifier.padding(espacoDasAbas).statusBarsPadding()
                 )
             }
 

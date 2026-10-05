@@ -21,6 +21,7 @@ import com.example.finansmart.data.*
 import com.example.finansmart.ui.components.BarraDeProgresso
 import com.example.finansmart.ui.components.Divisoria
 import com.example.finansmart.ui.components.Etiqueta
+import com.example.finansmart.ui.components.ForcarIconesClarosNaStatusBar
 import com.example.finansmart.ui.components.MarcadorDeLegenda
 import com.example.finansmart.ui.theme.Dimens
 import com.example.finansmart.ui.theme.FinanSmartTheme
@@ -36,6 +37,9 @@ fun DetalheTransacaoScreen(
 ) {
     val c = FinanSmartTheme.colors
     val t = FinanSmartTheme.type
+
+    // O topo desta tela e escuro nos dois temas.
+    ForcarIconesClarosNaStatusBar()
 
     val transacao = Repositorio.buscarTransacao(transacaoId)
 
