@@ -29,6 +29,9 @@ import com.example.finansmart.ui.theme.FinanSmartTheme
 @Composable
 fun ConfiguracoesScreen(
     onAbrirPerfil: () -> Unit = {},
+    onAlterarSenha: () -> Unit = {},
+    onPrivacidade: () -> Unit = {},
+    onSobre: () -> Unit = {},
     onSair: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -93,15 +96,11 @@ fun ConfiguracoesScreen(
         RotuloSecao(texto = "CONTA")
         Spacer(Modifier.height(9.dp))
         GrupoDeOpcoes {
+            // "Editar informacoes" saiu: abria exatamente a mesma tela que
+            // "Meu perfil", onde os campos ja sao editaveis.
             LinhaDeOpcao(
                 emoji = "👤",
                 texto = "Meu perfil",
-                aoClicar = onAbrirPerfil
-            )
-            Divisoria()
-            LinhaDeOpcao(
-                emoji = "✏️",
-                texto = "Editar informações",
                 aoClicar = onAbrirPerfil
             )
         }
@@ -125,8 +124,6 @@ fun ConfiguracoesScreen(
                 }
             )
             Divisoria()
-            LinhaDeOpcao(emoji = "💱", texto = "Moeda", valor = "BRL (R$)")
-            Divisoria()
             LinhaDeOpcao(
                 emoji = "🔔",
                 texto = "Notificações",
@@ -145,9 +142,9 @@ fun ConfiguracoesScreen(
         RotuloSecao(texto = "SEGURANÇA")
         Spacer(Modifier.height(9.dp))
         GrupoDeOpcoes {
-            LinhaDeOpcao(emoji = "🔑", texto = "Alterar senha")
+            LinhaDeOpcao(emoji = "🔑", texto = "Alterar senha", aoClicar = onAlterarSenha)
             Divisoria()
-            LinhaDeOpcao(emoji = "🛡️", texto = "Privacidade")
+            LinhaDeOpcao(emoji = "🛡️", texto = "Privacidade", aoClicar = onPrivacidade)
         }
 
         /* ---- SOBRE ---- */
@@ -155,7 +152,7 @@ fun ConfiguracoesScreen(
         RotuloSecao(texto = "SOBRE")
         Spacer(Modifier.height(9.dp))
         GrupoDeOpcoes {
-            LinhaDeOpcao(emoji = "ℹ️", texto = "Sobre o FinanSmart")
+            LinhaDeOpcao(emoji = "ℹ️", texto = "Sobre o FinanSmart", aoClicar = onSobre)
             Divisoria()
             LinhaDeOpcao(
                 emoji = "📦",

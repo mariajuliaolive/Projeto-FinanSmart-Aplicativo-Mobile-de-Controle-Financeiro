@@ -19,7 +19,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.finansmart.ui.screens.cadastro.CadastroScreen
 import com.example.finansmart.ui.screens.config.ConfiguracoesScreen
+import com.example.finansmart.ui.screens.config.AlterarSenhaScreen
+import com.example.finansmart.ui.screens.config.NotificacoesScreen
 import com.example.finansmart.ui.screens.config.PerfilScreen
+import com.example.finansmart.ui.screens.config.PrivacidadeScreen
+import com.example.finansmart.ui.screens.config.SobreScreen
 import com.example.finansmart.ui.screens.dashboard.DashboardScreen
 import com.example.finansmart.ui.screens.login.LoginScreen
 import com.example.finansmart.ui.screens.metas.MetasScreen
@@ -101,6 +105,7 @@ fun FinanSmartNavHost() {
             composable(Rotas.DASHBOARD) {
                 DashboardScreen(
                     onNovaTransacao = { navController.navigate(Rotas.NOVA_TRANSACAO) },
+                    onNotificacoes = { navController.navigate(Rotas.NOTIFICACOES) },
                     onVerTodas = { irParaAba(navController, Rotas.TRANSACOES) },
                     onAbrirTransacao = { id ->
                         navController.navigate(Rotas.detalheTransacao(id))
@@ -135,6 +140,9 @@ fun FinanSmartNavHost() {
             composable(Rotas.CONFIGURACOES) {
                 ConfiguracoesScreen(
                     onAbrirPerfil = { navController.navigate(Rotas.PERFIL) },
+                    onAlterarSenha = { navController.navigate(Rotas.ALTERAR_SENHA) },
+                    onPrivacidade = { navController.navigate(Rotas.PRIVACIDADE) },
+                    onSobre = { navController.navigate(Rotas.SOBRE) },
                     onSair = {
                         navController.navigate(Rotas.LOGIN) {
                             // Limpa tudo: sair da conta não deve deixar
@@ -160,6 +168,34 @@ fun FinanSmartNavHost() {
                 NovaMetaScreen(
                     onVoltar = { navController.popBackStack() },
                     onCriou = { navController.popBackStack() },
+                    modifier = Modifier.safeDrawingPadding()
+                )
+            }
+
+            composable(Rotas.NOTIFICACOES) {
+                NotificacoesScreen(
+                    onVoltar = { navController.popBackStack() },
+                    modifier = Modifier.safeDrawingPadding()
+                )
+            }
+
+            composable(Rotas.ALTERAR_SENHA) {
+                AlterarSenhaScreen(
+                    onVoltar = { navController.popBackStack() },
+                    modifier = Modifier.safeDrawingPadding()
+                )
+            }
+
+            composable(Rotas.PRIVACIDADE) {
+                PrivacidadeScreen(
+                    onVoltar = { navController.popBackStack() },
+                    modifier = Modifier.safeDrawingPadding()
+                )
+            }
+
+            composable(Rotas.SOBRE) {
+                SobreScreen(
+                    onVoltar = { navController.popBackStack() },
                     modifier = Modifier.safeDrawingPadding()
                 )
             }

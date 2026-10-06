@@ -79,6 +79,7 @@ object Repositorio {
         mes: Int,
         ano: Int,
         observacao: String = "",
+        emoji: String? = null,
     ) {
         transacoes.add(
             0,
@@ -88,7 +89,7 @@ object Repositorio {
                 valor = valor,
                 tipo = tipo,
                 categoria = categoria,
-                emoji = if (tipo == TipoTransacao.RECEITA) "💰" else categoria.emoji,
+                emoji = emoji ?: if (tipo == TipoTransacao.RECEITA) "💰" else categoria.emoji,
                 dia = dia,
                 mes = mes,
                 ano = ano,

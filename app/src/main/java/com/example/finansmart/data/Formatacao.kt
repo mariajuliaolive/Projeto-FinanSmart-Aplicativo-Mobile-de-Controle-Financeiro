@@ -42,3 +42,40 @@ fun lerValorDigitado(texto: String): Double {
         .trim()
     return limpo.toDoubleOrNull() ?: 0.0
 }
+
+/*
+ * DIGITACAO DE VALOR
+ *
+ * O jeito que os apps de banco fazem: a pessoa digita so numeros e eles
+ * entram pela direita, como centavos.
+ *
+ *   digita 5     -> R$ 0,05
+ *   digita 50    -> R$ 0,50
+ *   digita 500   -> R$ 5,00
+ *   digita 5000  -> R$ 50,00
+ *
+ * Guardamos o valor em CENTAVOS (um numero inteiro), nunca em texto.
+ * Assim nao existe ambiguidade entre ponto e virgula, e nao ha erro de
+ * arredondamento de ponto flutuante na digitacao.
+ */
+
+/** Acrescenta um digito ao valor em centavos. Ignora o que nao for numero. */
+fun acrescentarDigito(centavos: Long, tecla: Char): Long {
+    if (!tecla.isDigit()) return centavos
+    val novo = centavos * 10 + (tecla - '0')
+    // Trava em 999.999.999,99 para nao estourar o campo nem o Long.
+    return if (novo > 99_999_999_999L) centavos else novo
+}
+
+/** Le o texto que veio do teclado e devolve o total em centavos. */
+fun centavosDoTexto(texto: String): Long {
+    var total = 0L
+    texto.forEach { total = acrescentarDigito(total, it) }
+    return total
+}
+
+/** 12345 centavos -> "R$ 123,45" */
+fun formatarCentavos(centavos: Long): String = formatarMoeda(centavos / 100.0)
+
+/** 12345 centavos -> 123.45 */
+fun centavosParaReais(centavos: Long): Double = centavos / 100.0

@@ -38,7 +38,35 @@ enum class Categoria(
     EDUCACAO("Educação", "🎓", CatEducacao),
     LAZER("Lazer", "🎬", CatLazer),
     OUTROS("Outros", "⋯", CatOutros),
+    /**
+     * Categoria interna das receitas. Não aparece na grade de escolha da
+     * despesa — serve só para as transações de entrada terem uma cor e um
+     * rótulo quando aparecem nas listas.
+     */
     RECEITA("Receita", "💰", CatLazer);
+
+    companion object {
+        /** As 7 do protótipo, que a pessoa escolhe ao lançar uma despesa. */
+        val DESPESAS: List<Categoria> get() = entries.filter { it != RECEITA }
+    }
+}
+
+/**
+ * Categorias de receita.
+ *
+ * Não estavam no protótipo: foram pedidas no relatório de ajustes, para
+ * que a regra "categoria OU descrição" valha igual nas duas telas.
+ */
+enum class CategoriaReceita(
+    val rotulo: String,
+    val emoji: String,
+    val cor: Color,
+) {
+    SALARIO("Salário", "💰", CatLazer),
+    FREELANCE("Freelance", "💼", CatAlimentacao),
+    PRESENTE("Presente", "🎁", CatSaude),
+    INVESTIMENTO("Investimento", "📈", CatTransporte),
+    OUTROS("Outros", "⋯", CatOutros),
 }
 
 /**

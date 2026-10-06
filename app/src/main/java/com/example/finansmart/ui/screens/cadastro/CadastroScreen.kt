@@ -17,7 +17,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.finansmart.ui.components.BotaoOlho
 import com.example.finansmart.ui.components.BotaoPrimario
+import com.example.finansmart.ui.components.CaixaDeMarcar
 import com.example.finansmart.ui.components.BotaoVoltar
 import com.example.finansmart.ui.components.CampoTexto
 import com.example.finansmart.ui.theme.Dimens
@@ -99,10 +101,9 @@ fun CadastroScreen(
                 ocultarTexto = !senhaVisivel,
                 tipoTeclado = KeyboardType.Password,
                 conteudoFinal = {
-                    Text(
-                        text = if (senhaVisivel) "🙈" else "👁",
-                        fontSize = 16.sp,
-                        modifier = Modifier.clickable { senhaVisivel = !senhaVisivel }
+                    BotaoOlho(
+                        visivel = senhaVisivel,
+                        aoAlternar = { senhaVisivel = !senhaVisivel }
                     )
                 }
             )
@@ -136,6 +137,19 @@ fun CadastroScreen(
                 habilitado = podeCriar
             )
 
+            // Botao apagado e mudo confunde: aqui ele diz o que falta.
+            if (!podeCriar) {
+                Spacer(Modifier.height(Dimens.Space8))
+                Text(
+                    text = oQueFalta(
+                        nome = nome, email = email, senha = senha,
+                        senhasConferem = senhasConferem, aceitouTermos = aceitouTermos
+                    ),
+                    style = t.ListSubtitle,
+                    color = c.ink3
+                )
+            }
+
             Spacer(Modifier.height(Dimens.Space20))
         }
 
@@ -154,6 +168,29 @@ fun CadastroScreen(
                 modifier = Modifier.clickable { onVoltar() }
             )
         }
+    }
+}
+
+/** Monta a frase que explica por que o botao ainda esta apagado. */
+private fun oQueFalta(
+    nome: String,
+    email: String,
+    senha: String,
+    senhasConferem: Boolean,
+    aceitouTermos: Boolean,
+): String {
+    val pendencias = buildList {
+        if (nome.isBlank()) add("o nome")
+        if (email.isBlank()) add("o e-mail")
+        if (senha.isBlank()) add("a senha")
+        else if (!senhasConferem) add("a confirmação igual à senha")
+        if (!aceitouTermos) add("aceitar os termos")
+    }
+    return when (pendencias.size) {
+        0 -> ""
+        1 -> "Falta " + pendencias[0] + "."
+        else -> "Falta " + pendencias.dropLast(1).joinToString(", ") +
+                " e " + pendencias.last() + "."
     }
 }
 
@@ -224,15 +261,7 @@ private fun AceiteDosTermos(marcado: Boolean, aoAlternar: () -> Unit) {
         modifier = Modifier.clickable(onClick = aoAlternar),
         verticalAlignment = Alignment.Top
     ) {
-        Box(
-            modifier = Modifier
-                .size(20.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(if (marcado) c.primaryFill else c.surface2),
-            contentAlignment = Alignment.Center
-        ) {
-            if (marcado) Text(text = "✓", fontSize = 12.sp, color = Color.White)
-        }
+        CaixaDeMarcar(marcada = marcado, aoAlternar = aoAlternar)
         Spacer(Modifier.width(10.dp))
         Text(
             text = "Li e aceito os Termos de uso e a Política de privacidade.",

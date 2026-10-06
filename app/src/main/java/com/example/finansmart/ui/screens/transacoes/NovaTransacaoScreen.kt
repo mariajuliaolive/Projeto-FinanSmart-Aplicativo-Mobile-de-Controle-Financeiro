@@ -1,7 +1,6 @@
 package com.example.finansmart.ui.screens.transacoes
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -23,9 +22,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.finansmart.data.*
+import com.example.finansmart.ui.components.CabecalhoTela
 import com.example.finansmart.ui.components.CampoTexto
 import com.example.finansmart.ui.components.Cartao
-import com.example.finansmart.ui.components.CabecalhoTela
 import com.example.finansmart.ui.components.Pilula
 import com.example.finansmart.ui.theme.Dimens
 import com.example.finansmart.ui.theme.FinanSmartTheme
@@ -34,8 +33,7 @@ import com.example.finansmart.ui.theme.FinanSmartTheme
  * TELA 06 - NOVA TRANSACAO
  *
  * A tela 14 do prototipo ("Erros e avisos") nao e outra tela: e esta
- * mesma, quando a pessoa tenta salvar com os campos em branco. Por isso
- * as mensagens de erro moram aqui.
+ * mesma, quando a pessoa tenta salvar sem o necessario.
  */
 
 @Composable
@@ -48,17 +46,33 @@ fun NovaTransacaoScreen(
     val t = FinanSmartTheme.type
 
     var tipo by remember { mutableStateOf(TipoTransacao.DESPESA) }
-    var valorTexto by remember { mutableStateOf("") }
+
+    // Guardamos so os DIGITOS que a pessoa teclou ("5000"). O "R$ 50,00"
+    // e desenhado a partir deles. Ver CampoDeValor, no fim do arquivo.
+    var digitos by remember { mutableStateOf("") }
+
     var descricao by remember { mutableStateOf("") }
-    var categoria by remember { mutableStateOf(Categoria.ALIMENTACAO) }
+    // Comecam SEM nada escolhido: a regra e "categoria OU descricao",
+    // entao deixar uma pre-selecionada tornaria a regra inutil.
+    var categoriaDespesa by remember { mutableStateOf<Categoria?>(null) }
+    var categoriaReceita by remember { mutableStateOf<CategoriaReceita?>(null) }
     var data by remember { mutableStateOf("19/09/2026") }
     var observacao by remember { mutableStateOf("") }
     var tentouSalvar by remember { mutableStateOf(false) }
 
-    val valor = lerValorDigitado(valorTexto)
-    val erroValor = tentouSalvar && valor <= 0.0
-    val erroDescricao = tentouSalvar && descricao.isBlank()
-    val corDoValor = if (tipo == TipoTransacao.RECEITA) c.pos else c.neg
+    val ehReceita = tipo == TipoTransacao.RECEITA
+    val centavos = digitos.toLongOrNull() ?: 0L
+    val valor = centavosParaReais(centavos)
+    val temCategoria = if (ehReceita) categoriaReceita != null else categoriaDespesa != null
+    val temDescricao = descricao.isNotBlank()
+
+    // Pelo menos UM dos dois: categoria ou descricao.
+    val faltaIdentificar = !temCategoria && !temDescricao
+    val erroValor = tentouSalvar && centavos <= 0L
+    val erroIdentificacao = tentouSalvar && faltaIdentificar
+    val podeSalvar = centavos > 0L && !faltaIdentificar
+
+    val corDoValor = if (ehReceita) c.pos else c.neg
 
     Column(modifier.fillMaxSize()) {
 
@@ -82,26 +96,8 @@ fun NovaTransacaoScreen(
                     .padding(5.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                AbaDeTipo(
-                    texto = "Receita",
-                    ativa = tipo == TipoTransacao.RECEITA,
-                    corAtiva = c.pos,
-                    aoClicar = {
-                        tipo = TipoTransacao.RECEITA
-                        categoria = Categoria.RECEITA
-                    },
-                    modifier = Modifier.weight(1f)
-                )
-                AbaDeTipo(
-                    texto = "Despesa",
-                    ativa = tipo == TipoTransacao.DESPESA,
-                    corAtiva = c.neg,
-                    aoClicar = {
-                        tipo = TipoTransacao.DESPESA
-                        if (categoria == Categoria.RECEITA) categoria = Categoria.ALIMENTACAO
-                    },
-                    modifier = Modifier.weight(1f)
-                )
+                AbaDeTipo("Receita", ehReceita, c.pos, { tipo = TipoTransacao.RECEITA }, Modifier.weight(1f))
+                AbaDeTipo("Despesa", !ehReceita, c.neg, { tipo = TipoTransacao.DESPESA }, Modifier.weight(1f))
             }
 
             /* ---- valor ---- */
@@ -119,30 +115,10 @@ fun NovaTransacaoScreen(
                         color = if (erroValor) c.neg else c.ink2
                     )
                     Spacer(Modifier.height(6.dp))
-                    BasicTextField(
-                        value = valorTexto,
-                        onValueChange = { valorTexto = it },
-                        singleLine = true,
-                        textStyle = t.ValorEntrada.copy(
-                            color = corDoValor,
-                            textAlign = TextAlign.Center
-                        ),
-                        cursorBrush = SolidColor(corDoValor),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth(),
-                        decorationBox = { campo ->
-                            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
-                                if (valorTexto.isEmpty()) {
-                                    Text(
-                                        text = "R$ 0,00",
-                                        style = t.ValorEntrada,
-                                        color = c.ink3,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                                campo()
-                            }
-                        }
+                    CampoDeValor(
+                        digitos = digitos,
+                        aoMudar = { digitos = it },
+                        cor = corDoValor
                     )
                 }
             }
@@ -151,28 +127,49 @@ fun NovaTransacaoScreen(
                 MensagemDeErro("Informe um valor maior que zero.")
             }
 
-            /* ---- descricao ---- */
+            /* ---- categoria ---- */
             Spacer(Modifier.height(Dimens.Space20))
-            CampoTexto(
-                rotulo = if (erroDescricao) "Descrição *" else "Descrição",
-                valor = descricao,
-                aoMudarValor = { descricao = it },
-                placeholder = "Ex.: mercado do mês"
+            Text(
+                text = "Categoria",
+                style = t.FieldLabel,
+                color = if (erroIdentificacao) c.neg else c.ink2
             )
-            if (erroDescricao) {
-                Spacer(Modifier.height(4.dp))
-                MensagemDeErro("Campo obrigatório.")
+            Spacer(Modifier.height(9.dp))
+            if (ehReceita) {
+                GradeDePilulas(
+                    itens = CategoriaReceita.entries.map { it.emoji + " " + it.rotulo },
+                    indiceSelecionado = categoriaReceita?.ordinal,
+                    aoSelecionar = { indice ->
+                        categoriaReceita =
+                            if (categoriaReceita?.ordinal == indice) null
+                            else CategoriaReceita.entries[indice]
+                    }
+                )
+            } else {
+                val lista = Categoria.DESPESAS
+                GradeDePilulas(
+                    itens = lista.map { it.emoji + " " + it.rotulo },
+                    indiceSelecionado = categoriaDespesa?.let { lista.indexOf(it) },
+                    aoSelecionar = { indice ->
+                        categoriaDespesa =
+                            if (categoriaDespesa == lista[indice]) null else lista[indice]
+                    }
+                )
             }
 
-            /* ---- categoria ---- */
-            if (tipo == TipoTransacao.DESPESA) {
-                Spacer(Modifier.height(Dimens.Space16))
-                Text(text = "Categoria", style = t.FieldLabel, color = c.ink2)
-                Spacer(Modifier.height(9.dp))
-                GradeDeCategorias(
-                    selecionada = categoria,
-                    aoSelecionar = { categoria = it }
-                )
+            /* ---- descricao ---- */
+            Spacer(Modifier.height(Dimens.Space16))
+            CampoTexto(
+                rotulo = if (temCategoria) "Descrição (opcional)" else "Descrição",
+                valor = descricao,
+                aoMudarValor = { descricao = it },
+                placeholder = if (ehReceita) "Ex.: salário, freelance, presente"
+                else "Ex.: mercado do mês"
+            )
+
+            if (erroIdentificacao) {
+                Spacer(Modifier.height(6.dp))
+                MensagemDeErro("Escolha uma categoria ou escreva uma descrição.")
             }
 
             /* ---- data ---- */
@@ -191,15 +188,15 @@ fun NovaTransacaoScreen(
                 rotulo = "Observação (opcional)",
                 valor = observacao,
                 aoMudarValor = { observacao = it },
-                placeholder = "Compra da semana"
+                placeholder = if (ehReceita) "Pagamento do mês" else "Compra da semana"
             )
 
-            Spacer(Modifier.height(Dimens.Space20))
-
-            /* ---- dica do prototipo (tela 14) ---- */
-            if (tipo == TipoTransacao.DESPESA) {
+            /* ---- dica de quanto ja foi gasto na categoria ---- */
+            val cat = categoriaDespesa
+            if (!ehReceita && cat != null) {
+                Spacer(Modifier.height(Dimens.Space20))
                 val jaGasto = Repositorio.gastosPorCategoria()
-                    .firstOrNull { it.first == categoria }?.second ?: 0.0
+                    .firstOrNull { it.first == cat }?.second ?: 0.0
                 val planejado = 400.0
                 val percentual = (jaGasto / planejado * 100).toInt()
                 Row(
@@ -214,7 +211,7 @@ fun NovaTransacaoScreen(
                     Spacer(Modifier.width(10.dp))
                     Text(
                         text = "Você já gastou $percentual% do planejado em " +
-                                "${categoria.rotulo} neste mês.",
+                                "${cat.rotulo} neste mês.",
                         style = t.Caption,
                         color = c.ink2
                     )
@@ -224,12 +221,15 @@ fun NovaTransacaoScreen(
             Spacer(Modifier.height(Dimens.Space20))
         }
 
-        /* ---- botao fixo no rodape ---- */
+        /* ---- botao fixo ---- */
         Column(
             Modifier
                 .fillMaxWidth()
                 .background(c.surface)
-                .padding(start = Dimens.ScreenPadding, end = Dimens.ScreenPadding, top = 14.dp, bottom = 26.dp)
+                .padding(
+                    start = Dimens.ScreenPadding, end = Dimens.ScreenPadding,
+                    top = 14.dp, bottom = 26.dp
+                )
         ) {
             Box(
                 Modifier
@@ -245,13 +245,19 @@ fun NovaTransacaoScreen(
                     .background(c.primaryFill)
                     .clickable {
                         tentouSalvar = true
-                        if (valor > 0.0 && descricao.isNotBlank()) {
+                        if (podeSalvar) {
                             val partes = data.split("/")
                             Repositorio.adicionarTransacao(
-                                descricao = descricao.trim(),
+                                descricao = descricao.trim().ifBlank {
+                                    if (ehReceita) categoriaReceita?.rotulo.orEmpty()
+                                    else categoriaDespesa?.rotulo.orEmpty()
+                                },
                                 valor = valor,
                                 tipo = tipo,
-                                categoria = categoria,
+                                categoria = if (ehReceita) Categoria.RECEITA
+                                else categoriaDespesa ?: Categoria.OUTROS,
+                                emoji = if (ehReceita) categoriaReceita?.emoji ?: "💰"
+                                else categoriaDespesa?.emoji ?: "⋯",
                                 dia = partes.getOrNull(0)?.toIntOrNull() ?: 19,
                                 mes = partes.getOrNull(1)?.toIntOrNull() ?: 9,
                                 ano = partes.getOrNull(2)?.toIntOrNull() ?: 2026,
@@ -266,6 +272,60 @@ fun NovaTransacaoScreen(
             }
         }
     }
+}
+
+/**
+ * O campo grande do valor, com formatacao automatica.
+ *
+ *   digita 5     -> R$ 0,05
+ *   digita 50    -> R$ 0,50
+ *   digita 500   -> R$ 5,00
+ *   digita 5000  -> R$ 50,00
+ *
+ * O TRUQUE: o campo de texto guarda APENAS os digitos crus ("5000") e e
+ * desenhado transparente. Por cima dele mostramos o texto formatado.
+ *
+ * Por que nao colocar o "R$ 50,00" direto no campo? Porque o texto
+ * formatado tem digitos proprios (o 0 e o 0 dos centavos), e a cada tecla
+ * o cursor volta ao inicio -- os numeros entravam na frente e a conta
+ * saia errada. Com digitos crus nao ha ambiguidade.
+ */
+@Composable
+private fun CampoDeValor(
+    digitos: String,
+    aoMudar: (String) -> Unit,
+    cor: Color,
+) {
+    val c = FinanSmartTheme.colors
+    val t = FinanSmartTheme.type
+    val centavos = digitos.toLongOrNull() ?: 0L
+
+    BasicTextField(
+        value = digitos,
+        onValueChange = { novo ->
+            // So numeros, e no maximo 999.999.999,99
+            aoMudar(novo.filter { it.isDigit() }.trimStart('0').take(11))
+        },
+        singleLine = true,
+        textStyle = t.ValorEntrada.copy(
+            color = Color.Transparent,
+            textAlign = TextAlign.Center
+        ),
+        cursorBrush = SolidColor(Color.Transparent),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        modifier = Modifier.fillMaxWidth(),
+        decorationBox = { campoInvisivel ->
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = formatarCentavos(centavos),
+                    style = t.ValorEntrada,
+                    color = if (centavos > 0L) cor else c.ink3,
+                    textAlign = TextAlign.Center
+                )
+                campoInvisivel()
+            }
+        }
+    )
 }
 
 @Composable
@@ -296,21 +356,22 @@ private fun AbaDeTipo(
     }
 }
 
+/** Pilulas em duas colunas. O Compose basico nao tem "flex-wrap". */
 @Composable
-private fun GradeDeCategorias(
-    selecionada: Categoria,
-    aoSelecionar: (Categoria) -> Unit,
+private fun GradeDePilulas(
+    itens: List<String>,
+    indiceSelecionado: Int?,
+    aoSelecionar: (Int) -> Unit,
 ) {
-    val lista = Categoria.entries.filter { it != Categoria.RECEITA }
-    // Duas fileiras manuais: o Compose basico nao tem "flex-wrap".
     Column(verticalArrangement = Arrangement.spacedBy(Dimens.Space8)) {
-        lista.chunked(2).forEach { dupla ->
+        itens.chunked(2).forEachIndexed { linha, dupla ->
             Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)) {
-                dupla.forEach { categoria ->
+                dupla.forEachIndexed { coluna, rotulo ->
+                    val indice = linha * 2 + coluna
                     Pilula(
-                        texto = "${categoria.emoji} ${categoria.rotulo}",
-                        selecionada = categoria == selecionada,
-                        aoClicar = { aoSelecionar(categoria) },
+                        texto = rotulo,
+                        selecionada = indice == indiceSelecionado,
+                        aoClicar = { aoSelecionar(indice) },
                         destaque = true,
                         modifier = Modifier.weight(1f)
                     )

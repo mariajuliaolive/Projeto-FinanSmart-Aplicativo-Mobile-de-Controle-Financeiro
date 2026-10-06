@@ -50,15 +50,15 @@ fun RelatoriosScreen(modifier: Modifier = Modifier) {
     ) {
         Spacer(Modifier.height(6.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "Relatórios",
-                style = t.TituloLista,
-                color = c.ink,
-                modifier = Modifier.weight(1f)
-            )
-            Pilula(texto = "Este mês ▾", selecionada = true, aoClicar = {})
-        }
+        // A caixinha "Este mes" saiu: nao filtrava nada, porque o app so
+        // tem lancamentos de um mes. O periodo passou a ser o subtitulo.
+        Text(text = "Relatórios", style = t.TituloLista, color = c.ink)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = MESES_LONGOS[8].lowercase().replaceFirstChar { it.uppercase() } + " de 2026",
+            style = t.Body,
+            color = c.ink2
+        )
 
         /* ---- cards do topo ---- */
         Spacer(Modifier.height(Dimens.Space20))
@@ -90,20 +90,27 @@ fun RelatoriosScreen(modifier: Modifier = Modifier) {
         Cartao {
             Text(text = "Gastos por categoria", style = t.SectionTitle, color = c.ink)
             Spacer(Modifier.height(Dimens.Space16))
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 RoscaDeCategorias(
                     fatias = porCategoria,
                     total = despesas,
                     corDoMiolo = c.surface,
-                    modifier = Modifier.size(96.dp)
+                    modifier = Modifier.size(132.dp)
                 )
-                Spacer(Modifier.width(Dimens.Space18))
+
+                Spacer(Modifier.height(Dimens.Space18))
+
+                // Legenda embaixo, em duas colunas largas: assim os nomes
+                // cabem inteiros e nao ficam por baixo do grafico.
                 Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(7.dp)
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)
                 ) {
                     porCategoria.chunked(2).forEach { dupla ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Space12)) {
                             dupla.forEach { (categoria, _) ->
                                 Row(
                                     modifier = Modifier.weight(1f),
@@ -113,11 +120,9 @@ fun RelatoriosScreen(modifier: Modifier = Modifier) {
                                     Spacer(Modifier.width(6.dp))
                                     Text(
                                         text = categoria.rotulo,
-                                        style = t.Rotulo11,
+                                        style = t.Rotulo115,
                                         color = c.ink,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Visible,
-                                        softWrap = false
+                                        maxLines = 1
                                     )
                                 }
                             }
@@ -310,7 +315,7 @@ private fun RoscaDeCategorias(
         }
         Box(
             Modifier
-                .size(64.dp)
+                .size(84.dp)
                 .clip(RoundedCornerShape(Dimens.RadiusPill))
                 .background(corDoMiolo),
             contentAlignment = Alignment.Center
@@ -327,7 +332,7 @@ private fun RoscaDeCategorias(
                     text = formatarMoedaCurta(total),
                     style = FinanSmartTheme.type.ListTitle.copy(
                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        fontSize = 13.sp
+                        fontSize = 15.sp
                     ),
                     color = c.ink,
                     maxLines = 1,

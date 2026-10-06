@@ -19,9 +19,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.finansmart.ui.components.BotaoOlho
 import com.example.finansmart.ui.components.BotaoPrimario
 import com.example.finansmart.ui.components.BotaoSecundario
 import com.example.finansmart.ui.components.CampoTexto
+import com.example.finansmart.ui.components.ConteudoBotaoGoogle
 import com.example.finansmart.ui.theme.Dimens
 import com.example.finansmart.ui.theme.FinanSmartTheme
 
@@ -91,10 +93,9 @@ fun LoginScreen(
                 ocultarTexto = !senhaVisivel,
                 tipoTeclado = KeyboardType.Password,
                 conteudoFinal = {
-                    Text(
-                        text = if (senhaVisivel) "🙈" else "👁",
-                        fontSize = 16.sp,
-                        modifier = Modifier.clickable { senhaVisivel = !senhaVisivel }
+                    BotaoOlho(
+                        visivel = senhaVisivel,
+                        aoAlternar = { senhaVisivel = !senhaVisivel }
                     )
                 }
             )

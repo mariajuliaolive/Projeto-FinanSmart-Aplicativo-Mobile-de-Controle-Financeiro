@@ -18,6 +18,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.finansmart.data.*
+import com.example.finansmart.ui.components.BotaoOlho
 import com.example.finansmart.ui.components.Cartao
 import com.example.finansmart.ui.components.ItemTransacao
 import com.example.finansmart.ui.components.MarcadorDeLegenda
@@ -30,6 +31,7 @@ import com.example.finansmart.ui.theme.FinanSmartTheme
 @Composable
 fun DashboardScreen(
     onNovaTransacao: () -> Unit = {},
+    onNotificacoes: () -> Unit = {},
     onVerTodas: () -> Unit = {},
     onAbrirTransacao: (Long) -> Unit = {},
     modifier: Modifier = Modifier,
@@ -92,7 +94,8 @@ fun DashboardScreen(
                     .size(Dimens.IconBoxLarge)
                     .clip(RoundedCornerShape(Dimens.RadiusField))
                     .background(c.surface)
-                    .border(Dimens.BorderWidth, c.line, RoundedCornerShape(Dimens.RadiusField)),
+                    .border(Dimens.BorderWidth, c.line, RoundedCornerShape(Dimens.RadiusField))
+                    .clickable { onNotificacoes() },
                 contentAlignment = Alignment.Center
             ) {
                 Text(text = "🔔", fontSize = 17.sp)
@@ -127,13 +130,14 @@ fun DashboardScreen(
                     Modifier
                         .size(32.dp)
                         .clip(RoundedCornerShape(Dimens.RadiusPill))
-                        .background(c.panel2)
-                        .clickable { saldoVisivel = !saldoVisivel },
+                        .background(c.panel2),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = if (saldoVisivel) "👁" else "🙈",
-                        fontSize = 14.sp
+                    BotaoOlho(
+                        visivel = saldoVisivel,
+                        aoAlternar = { saldoVisivel = !saldoVisivel },
+                        cor = Color.White,
+                        tamanho = 17.dp
                     )
                 }
             }
@@ -144,20 +148,15 @@ fun DashboardScreen(
                 color = Color.White
             )
             Spacer(Modifier.height(Dimens.Space18))
-            Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Space8)) {
-                BotaoDoCartao(
-                    texto = "＋ Nova",
-                    fundo = c.primaryFill,
-                    aoClicar = onNovaTransacao,
-                    modifier = Modifier.weight(1f)
-                )
-                BotaoDoCartao(
-                    texto = "↗ Enviar",
-                    fundo = c.panel2,
-                    aoClicar = {},
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            // "Enviar" saiu: o FinanSmart e um controle de gastos, nao um
+            // banco -- nao ha para onde enviar dinheiro. O botao de lancar
+            // uma transacao passa a ocupar a largura toda.
+            BotaoDoCartao(
+                texto = "＋ Nova transação",
+                fundo = c.primaryFill,
+                aoClicar = onNovaTransacao,
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         /* ---- receitas e despesas ---- */

@@ -23,6 +23,10 @@ object Rotas {
     const val NOVA_TRANSACAO = "nova_transacao"
     const val NOVA_META = "nova_meta"
     const val PERFIL = "perfil"
+    const val NOTIFICACOES = "notificacoes"
+    const val ALTERAR_SENHA = "alterar_senha"
+    const val PRIVACIDADE = "privacidade"
+    const val SOBRE = "sobre"
 
     /**
      * O detalhe precisa saber QUAL transação mostrar, então a rota leva

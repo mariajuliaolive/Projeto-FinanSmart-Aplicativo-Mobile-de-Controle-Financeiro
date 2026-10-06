@@ -49,7 +49,28 @@ fun BotaoPrimario(
     }
 }
 
-/** Botão branco com borda. Usado no "Google" e "Face ID". */
+/** Botão branco com borda, com conteúdo livre (um logo + texto, p. ex.). */
+@Composable
+fun BotaoSecundario(
+    conteudo: @Composable () -> Unit,
+    aoClicar: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = FinanSmartTheme.colors
+    Box(
+        modifier = modifier
+            .height(Dimens.ButtonHeightSmall)
+            .clip(RoundedCornerShape(Dimens.RadiusField))
+            .background(c.surface)
+            .border(Dimens.BorderWidth, c.line, RoundedCornerShape(Dimens.RadiusField))
+            .clickable(onClick = aoClicar),
+        contentAlignment = Alignment.Center
+    ) {
+        conteudo()
+    }
+}
+
+/** Botão branco com borda, com um texto simples. */
 @Composable
 fun BotaoSecundario(
     texto: String,
