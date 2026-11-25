@@ -131,6 +131,16 @@ object Repositorio {
         perfil.value = novo
     }
 
+    /**
+     * Chamado quando alguem faz login ou cria conta: troca o nome e o
+     * e-mail de exemplo pelos da conta do Firebase. Telefone e renda
+     * continuam os de exemplo -- o Firebase Auth nao guarda esses dados
+     * (eles irao para o Firestore mais adiante).
+     */
+    fun usarContaLogada(nome: String, email: String) {
+        perfil.value = perfil.value.copy(nome = nome, email = email)
+    }
+
     /* ---------------- dados de exemplo ---------------- */
 
     /*

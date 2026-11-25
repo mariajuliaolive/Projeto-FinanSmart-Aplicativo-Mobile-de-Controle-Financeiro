@@ -20,6 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.finansmart.data.Repositorio
 import com.example.finansmart.ui.auth.AuthViewModel
 import com.example.finansmart.ui.screens.cadastro.CadastroScreen
 import com.example.finansmart.ui.screens.config.ConfiguracoesScreen
@@ -54,6 +55,15 @@ fun FinanSmartNavHost() {
     // Configuracoes enxergam o mesmo estado (quem esta logado, erros...).
     val authViewModel: AuthViewModel = viewModel()
     val authEstado by authViewModel.estado.collectAsStateWithLifecycle()
+
+    // Sempre que o usuario logado muda (login, cadastro, app reaberto),
+    // o perfil passa a mostrar o nome e o e-mail reais. Dashboard,
+    // Configuracoes e Perfil leem do Repositorio, entao atualizam sozinhos.
+    LaunchedEffect(authEstado.usuario) {
+        authEstado.usuario?.let { usuario ->
+            Repositorio.usarContaLogada(nome = usuario.nome, email = usuario.email)
+        }
+    }
 
     // Qual rota está na tela agora -- usado para acender a aba certa.
     val entradaAtual by navController.currentBackStackEntryAsState()
