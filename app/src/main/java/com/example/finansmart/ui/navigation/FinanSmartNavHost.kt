@@ -60,8 +60,12 @@ fun FinanSmartNavHost() {
     // o perfil passa a mostrar o nome e o e-mail reais. Dashboard,
     // Configuracoes e Perfil leem do Repositorio, entao atualizam sozinhos.
     LaunchedEffect(authEstado.usuario) {
-        authEstado.usuario?.let { usuario ->
+        val usuario = authEstado.usuario
+        if (usuario != null) {
             Repositorio.usarContaLogada(nome = usuario.nome, email = usuario.email)
+            Repositorio.conectar(usuario.uid)    // passa a usar as transacoes do Firestore
+        } else {
+            Repositorio.desconectar()            // saiu: para de ouvir e limpa
         }
     }
 

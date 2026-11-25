@@ -1,7 +1,14 @@
 package com.example.finansmart.data
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.launch
 
 /*
  * O REPOSITORIO
@@ -38,6 +45,97 @@ object Repositorio {
     val temaEscuroForcado = mutableStateOf<Boolean?>(null)
 
     private var proximoId = 1L
+
+    /* ---------------- ligacao com o Firestore ---------------- */
+
+    private val transacaoRepo = TransacaoRepository()
+    private val metaRepo = MetaRepository()
+    private val perfilRepo = PerfilRepository()
+
+    // Escopo das coroutines do Repositorio. Dispatchers.Main: a lista e
+    // atualizada na thread da tela, que e onde o Compose espera.
+    private val escopo = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    private var uidConectado: String? = null
+    private var observacaoDasTransacoes: Job? = null
+    private var observacaoDasMetas: Job? = null
+    private var observacaoDoPerfil: Job? = null
+
+    /**
+     * Chamado quando alguem entra (login, cadastro ou app reaberto).
+     * Troca os dados de exemplo pelas transacoes desta pessoa no
+     * Firestore, e passa a receber cada mudanca em tempo real.
+     */
+    fun conectar(uid: String) {
+        if (uid == uidConectado) return          // ja esta ligado nessa conta
+        desconectar()
+        uidConectado = uid
+
+        // Tira o telefone e a renda de exemplo: ate o Firestore responder
+        // (ou se a conta for nova), eles ficam vazios em vez de mostrar
+        // os dados da "Maria" de exemplo.
+        perfil.value = perfil.value.copy(telefone = "", rendaMensal = 0.0)
+
+        observacaoDasTransacoes = escopo.launch {
+            transacaoRepo.observar(uid)
+                .catch { erro -> Log.e("Repositorio", "Erro ao ler transacoes", erro) }
+                .collect { listaDoFirestore ->
+                    // Troca o conteudo da lista: as telas se redesenham sozinhas.
+                    transacoes.clear()
+                    transacoes.addAll(listaDoFirestore)
+                }
+        }
+
+        // Mesma coisa para as metas, numa segunda "escuta" independente.
+        observacaoDasMetas = escopo.launch {
+            metaRepo.observar(uid)
+                .catch { erro -> Log.e("Repositorio", "Erro ao ler metas", erro) }
+                .collect { listaDoFirestore ->
+                    metas.clear()
+                    metas.addAll(listaDoFirestore)
+                }
+        }
+
+        // E o perfil: o que estiver salvo no Firestore vence o de exemplo.
+        // Se o nome foi editado no "Meu perfil", ele tambem vence o do cadastro.
+        observacaoDoPerfil = escopo.launch {
+            perfilRepo.observar(uid)
+                .catch { erro -> Log.e("Repositorio", "Erro ao ler perfil", erro) }
+                .collect { dados ->
+                    if (dados != null) {
+                        val atual = perfil.value
+                        perfil.value = atual.copy(
+                            nome = dados.nome?.takeIf { it.isNotBlank() } ?: atual.nome,
+                            telefone = dados.telefone ?: atual.telefone,
+                            rendaMensal = dados.rendaMensal ?: atual.rendaMensal,
+                        )
+                    }
+                }
+        }
+    }
+
+    /** Chamado ao sair: para de ouvir o Firestore e limpa a tela. */
+    fun desconectar() {
+        observacaoDasTransacoes?.cancel()        // dispara o awaitClose -> remove o ouvinte
+        observacaoDasTransacoes = null
+        observacaoDasMetas?.cancel()
+        observacaoDasMetas = null
+        observacaoDoPerfil?.cancel()
+        observacaoDoPerfil = null
+        uidConectado = null
+        transacoes.clear()
+        metas.clear()
+    }
+
+    /*
+     * Ids unicos a partir do relogio (milissegundos). O maxOf garante que
+     * duas transacoes criadas no mesmo milissegundo nao repitam o id.
+     */
+    private var ultimoId = 0L
+    private fun novoId(): Long {
+        ultimoId = maxOf(System.currentTimeMillis(), ultimoId + 1)
+        return ultimoId
+    }
 
     init {
         carregarDadosDeExemplo()
@@ -81,27 +179,39 @@ object Repositorio {
         observacao: String = "",
         emoji: String? = null,
     ) {
-        transacoes.add(
-            0,
-            Transacao(
-                id = proximoId++,
-                descricao = descricao,
-                valor = valor,
-                tipo = tipo,
-                categoria = categoria,
-                emoji = emoji ?: if (tipo == TipoTransacao.RECEITA) "💰" else categoria.emoji,
-                dia = dia,
-                mes = mes,
-                ano = ano,
-                hora = "",
-                observacao = observacao,
-                formaPagamento = if (tipo == TipoTransacao.RECEITA) "Depósito" else "Cartão",
-            )
+        val nova = Transacao(
+            id = novoId(),
+            descricao = descricao,
+            valor = valor,
+            tipo = tipo,
+            categoria = categoria,
+            emoji = emoji ?: if (tipo == TipoTransacao.RECEITA) "💰" else categoria.emoji,
+            dia = dia,
+            mes = mes,
+            ano = ano,
+            hora = "",
+            observacao = observacao,
+            formaPagamento = if (tipo == TipoTransacao.RECEITA) "Depósito" else "Cartão",
         )
+
+        val uid = uidConectado
+        if (uid != null) {
+            // Logado: grava no Firestore. NAO adicionamos na lista aqui --
+            // o ouvinte do Firestore avisa na hora e a lista se atualiza
+            // sozinha (se adicionassemos tambem, ela apareceria duplicada).
+            transacaoRepo.adicionar(uid, nova)
+        } else {
+            transacoes.add(0, nova)              // sem login: so na memoria
+        }
     }
 
     fun removerTransacao(id: Long) {
-        transacoes.removeAll { it.id == id }
+        val uid = uidConectado
+        if (uid != null) {
+            transacaoRepo.remover(uid, id)       // o ouvinte tira da lista
+        } else {
+            transacoes.removeAll { it.id == id }
+        }
     }
 
     fun adicionarMeta(
@@ -113,22 +223,28 @@ object Repositorio {
         prazoAno: Int,
         reservaAutomatica: Boolean,
     ) {
-        metas.add(
-            Meta(
-                id = proximoId++,
-                nome = nome,
-                emoji = emoji,
-                objetivo = objetivo,
-                guardado = guardado,
-                prazoMes = prazoMes,
-                prazoAno = prazoAno,
-                reservaAutomatica = reservaAutomatica,
-            )
+        val nova = Meta(
+            id = novoId(),
+            nome = nome,
+            emoji = emoji,
+            objetivo = objetivo,
+            guardado = guardado,
+            prazoMes = prazoMes,
+            prazoAno = prazoAno,
+            reservaAutomatica = reservaAutomatica,
         )
+
+        val uid = uidConectado
+        if (uid != null) {
+            metaRepo.adicionar(uid, nova)        // o ouvinte coloca na lista
+        } else {
+            metas.add(nova)                      // sem login: so na memoria
+        }
     }
 
     fun atualizarPerfil(novo: Perfil) {
-        perfil.value = novo
+        perfil.value = novo                       // aparece na hora
+        uidConectado?.let { perfilRepo.salvar(it, novo) }   // e fica salvo
     }
 
     /**
