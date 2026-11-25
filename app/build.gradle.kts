@@ -59,6 +59,12 @@ dependencies {
     // MVVM no Compose: viewModel() e collectAsStateWithLifecycle()
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
+
+    // Login com Google: o Credential Manager abre a janela "Escolha uma
+    // conta" do Android; o googleid entrega o token que o Firebase aceita.
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
