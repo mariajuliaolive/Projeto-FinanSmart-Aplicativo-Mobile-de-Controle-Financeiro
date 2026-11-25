@@ -13,14 +13,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Deixa o app desenhar atrás da barra de status e dos botões do
-        // sistema -- é o que permite o fundo escuro da Splash e do topo
-        // do detalhe da transação ocuparem a tela inteira.
+
         enableEdgeToEdge()
 
         setContent {
-            // A tela 09 pode forçar claro ou escuro. Quando ninguém
-            // escolheu (null), seguimos o modo do celular.
             val escolhido = Repositorio.temaEscuroForcado.value
 
             FinanSmartTheme(darkTheme = escolhido ?: isSystemInDarkTheme()) {

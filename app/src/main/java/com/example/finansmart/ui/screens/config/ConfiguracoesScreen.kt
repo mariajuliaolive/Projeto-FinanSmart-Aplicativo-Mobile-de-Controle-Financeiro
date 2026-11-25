@@ -96,8 +96,7 @@ fun ConfiguracoesScreen(
         RotuloSecao(texto = "CONTA")
         Spacer(Modifier.height(9.dp))
         GrupoDeOpcoes {
-            // "Editar informacoes" saiu: abria exatamente a mesma tela que
-            // "Meu perfil", onde os campos ja sao editaveis.
+
             LinhaDeOpcao(
                 emoji = "👤",
                 texto = "Meu perfil",

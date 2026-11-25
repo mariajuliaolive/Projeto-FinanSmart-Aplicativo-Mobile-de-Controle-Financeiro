@@ -29,9 +29,14 @@ import com.example.finansmart.ui.theme.FinanSmartTheme
 
 @Composable
 fun LoginScreen(
-    onEntrar: () -> Unit = {},
+    // A tela entrega o que foi digitado; quem confere a senha e o ViewModel.
+    onEntrar: (email: String, senha: String) -> Unit = { _, _ -> },
     onCriarConta: () -> Unit = {},
-    onEsqueciSenha: () -> Unit = {},
+    onEsqueciSenha: (email: String) -> Unit = {},
+    // Vindos do AuthUiState, so para desenhar.
+    carregando: Boolean = false,
+    erro: String? = null,
+    mensagem: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val c = FinanSmartTheme.colors
@@ -108,12 +113,27 @@ fun LoginScreen(
                 color = c.primaryInk,
                 modifier = Modifier
                     .align(Alignment.End)
-                    .clickable { onEsqueciSenha() }
+                    // Usa o e-mail ja digitado no campo acima.
+                    .clickable(enabled = !carregando) { onEsqueciSenha(email) }
             )
 
             Spacer(Modifier.height(Dimens.Space18))
 
-            BotaoPrimario(texto = "Entrar", aoClicar = onEntrar)
+            BotaoPrimario(
+                texto = if (carregando) "Entrando…" else "Entrar",
+                aoClicar = { onEntrar(email, senha) },
+                habilitado = email.isNotBlank() && senha.isNotBlank() && !carregando
+            )
+
+            // Resposta do Firebase, ja em portugues.
+            if (erro != null) {
+                Spacer(Modifier.height(Dimens.Space8))
+                Text(text = "⚠ $erro", style = t.ListSubtitle, color = c.neg)
+            }
+            if (mensagem != null) {
+                Spacer(Modifier.height(Dimens.Space8))
+                Text(text = "✓ $mensagem", style = t.ListSubtitle, color = c.pos)
+            }
 
             Spacer(Modifier.height(22.dp))
 

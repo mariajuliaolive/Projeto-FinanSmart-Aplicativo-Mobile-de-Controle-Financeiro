@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -17,6 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.finansmart.ui.auth.AuthViewModel
 import com.example.finansmart.ui.screens.cadastro.CadastroScreen
 import com.example.finansmart.ui.screens.config.ConfiguracoesScreen
 import com.example.finansmart.ui.screens.config.AlterarSenhaScreen
@@ -45,6 +49,11 @@ import com.example.finansmart.ui.theme.FinanSmartTheme
 @Composable
 fun FinanSmartNavHost() {
     val navController = rememberNavController()
+
+    // UM ViewModel de autenticacao para o app inteiro: Login, Cadastro e
+    // Configuracoes enxergam o mesmo estado (quem esta logado, erros...).
+    val authViewModel: AuthViewModel = viewModel()
+    val authEstado by authViewModel.estado.collectAsStateWithLifecycle()
 
     // Qual rota está na tela agora -- usado para acender a aba certa.
     val entradaAtual by navController.currentBackStackEntryAsState()
@@ -86,17 +95,43 @@ fun FinanSmartNavHost() {
             }
 
             composable(Rotas.LOGIN) {
+                // Mesmo "vigia" do Cadastro: login deu certo -> Dashboard.
+                // Bonus: se o Firebase ja lembra de alguem logado, o usuario
+                // ja existe ao abrir esta tela e o app pula direto para dentro.
+                LaunchedEffect(authEstado.usuario) {
+                    if (authEstado.usuario != null) entrarNoApp(navController)
+                }
+
                 LoginScreen(
-                    onEntrar = { entrarNoApp(navController) },
-                    onCriarConta = { navController.navigate(Rotas.CADASTRO) },
-                    onEsqueciSenha = { /* Não existe como tela no protótipo. */ }
+                    onEntrar = { email, senha -> authViewModel.entrar(email, senha) },
+                    onCriarConta = {
+                        authViewModel.limparMensagens()
+                        navController.navigate(Rotas.CADASTRO)
+                    },
+                    onEsqueciSenha = { email -> authViewModel.recuperarSenha(email) },
+                    carregando = authEstado.carregando,
+                    erro = authEstado.erro,
+                    mensagem = authEstado.mensagem,
                 )
             }
 
             composable(Rotas.CADASTRO) {
+                // Quando a conta e criada, o estado ganha um "usuario".
+                // Este bloco percebe a mudanca e leva ao Dashboard.
+                LaunchedEffect(authEstado.usuario) {
+                    if (authEstado.usuario != null) entrarNoApp(navController)
+                }
+
                 CadastroScreen(
-                    onVoltar = { navController.popBackStack() },
-                    onCriarConta = { entrarNoApp(navController) }
+                    onVoltar = {
+                        authViewModel.limparMensagens()
+                        navController.popBackStack()
+                    },
+                    onCriarConta = { nome, email, senha ->
+                        authViewModel.criarConta(nome, email, senha)
+                    },
+                    carregando = authEstado.carregando,
+                    erro = authEstado.erro,
                 )
             }
 
@@ -144,6 +179,7 @@ fun FinanSmartNavHost() {
                     onPrivacidade = { navController.navigate(Rotas.PRIVACIDADE) },
                     onSobre = { navController.navigate(Rotas.SOBRE) },
                     onSair = {
+                        authViewModel.sair()   // desloga do Firebase de verdade
                         navController.navigate(Rotas.LOGIN) {
                             // Limpa tudo: sair da conta não deve deixar
                             // nenhuma tela do app logado na pilha.

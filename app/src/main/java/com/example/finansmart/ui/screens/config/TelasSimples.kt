@@ -25,13 +25,7 @@ import com.example.finansmart.ui.components.*
 import com.example.finansmart.ui.theme.Dimens
 import com.example.finansmart.ui.theme.FinanSmartTheme
 
-/*
- * TELAS QUE NAO EXISTIAM NO PROTOTIPO
- *
- * O relatorio de ajustes apontou que havia icones e itens de menu sem
- * destino: o sino do Dashboard e tres linhas das Configuracoes. Estas
- * telas fecham esses caminhos, seguindo o mesmo tema das demais.
- */
+
 
 /* ------------------------- NOTIFICACOES ------------------------- */
 
@@ -404,18 +398,7 @@ fun SobreScreen(
             LinhaDeOpcao(emoji = "🎯", texto = "Acompanhar metas de economia", mostrarSeta = false)
         }
 
-        Spacer(Modifier.height(22.dp))
-        RotuloSecao(texto = "CRÉDITOS")
-        Spacer(Modifier.height(9.dp))
-        GrupoBranco {
-            LinhaDeOpcao(emoji = "👩‍💻", texto = "Maria Julia Oliveira", mostrarSeta = false)
-            Divisoria()
-            LinhaDeOpcao(emoji = "📱", texto = "Kotlin e Jetpack Compose", mostrarSeta = false)
-            Divisoria()
-            LinhaDeOpcao(emoji = "🔤", texto = "Fontes DM Sans e DM Mono", mostrarSeta = false)
-        }
-
-        Spacer(Modifier.height(Dimens.Space20))
+        Spacer(Modifier.height(Dimens.Space18))
     }
 }
 

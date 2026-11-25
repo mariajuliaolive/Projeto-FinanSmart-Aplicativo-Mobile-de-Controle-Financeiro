@@ -30,7 +30,11 @@ import com.example.finansmart.ui.theme.FinanSmartTheme
 @Composable
 fun CadastroScreen(
     onVoltar: () -> Unit = {},
-    onCriarConta: () -> Unit = {},
+    // Agora a tela entrega o que foi digitado; quem cria a conta e o ViewModel.
+    onCriarConta: (nome: String, email: String, senha: String) -> Unit = { _, _, _ -> },
+    // Estes dois vem do AuthUiState e so servem para desenhar.
+    carregando: Boolean = false,
+    erro: String? = null,
     modifier: Modifier = Modifier,
 ) {
     val c = FinanSmartTheme.colors
@@ -132,10 +136,17 @@ fun CadastroScreen(
             Spacer(Modifier.height(Dimens.Space16))
 
             BotaoPrimario(
-                texto = "Criar conta",
-                aoClicar = onCriarConta,
-                habilitado = podeCriar
+                texto = if (carregando) "Criando conta…" else "Criar conta",
+                aoClicar = { onCriarConta(nome, email, senha) },
+                // Apagado enquanto espera o Firebase: evita criar a conta duas vezes.
+                habilitado = podeCriar && !carregando
             )
+
+            // Erro vindo do Firebase (e-mail ja usado, sem internet...), ja traduzido.
+            if (erro != null) {
+                Spacer(Modifier.height(Dimens.Space8))
+                Text(text = "⚠ $erro", style = t.ListSubtitle, color = c.neg)
+            }
 
             // Botao apagado e mudo confunde: aqui ele diz o que falta.
             if (!podeCriar) {

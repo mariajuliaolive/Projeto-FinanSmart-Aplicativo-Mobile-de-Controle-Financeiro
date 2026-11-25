@@ -16,3 +16,9 @@ local.properties
 
 # Backup do arquivo original de configuracao
 gradle.properties.bak
+
+# Configuracao do Firebase: fica so no computador (repositorio publico)
+app/google-services.json
+
+# Lista de aparelhos do Android Studio (muda a cada maquina)
+/.idea/deviceManager.xml

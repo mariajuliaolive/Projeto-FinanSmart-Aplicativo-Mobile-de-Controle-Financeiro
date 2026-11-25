@@ -31,8 +31,7 @@ import com.example.finansmart.ui.theme.FinanSmartTheme
 /*
  * TELA 05 - TRANSACOES
  *
- * A tela 13 do prototipo ("Estado vazio") nao e outra tela: e esta mesma,
- * quando a busca nao encontra nada. Por isso ela mora aqui dentro.
+ *
  */
 
 @Composable
