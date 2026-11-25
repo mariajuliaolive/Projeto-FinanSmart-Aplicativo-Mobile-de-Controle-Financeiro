@@ -278,7 +278,22 @@ fun FinanSmartNavHost() {
                 DetalheTransacaoScreen(
                     transacaoId = id,
                     onVoltar = { navController.popBackStack() },
+                    onEditar = { navController.navigate(Rotas.editarTransacao(id)) },
                     onExcluiu = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Rotas.EDITAR_TRANSACAO,
+                arguments = listOf(navArgument("id") { type = NavType.LongType })
+            ) { entrada ->
+                val id = entrada.arguments?.getLong("id") ?: 0L
+                // A MESMA tela da "Nova transacao", agora recebendo o id.
+                NovaTransacaoScreen(
+                    transacaoId = id,
+                    onVoltar = { navController.popBackStack() },
+                    onSalvou = { navController.popBackStack() },   // volta ao detalhe
+                    modifier = Modifier.safeDrawingPadding()
                 )
             }
 

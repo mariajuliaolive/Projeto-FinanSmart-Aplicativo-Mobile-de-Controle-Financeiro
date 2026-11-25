@@ -40,24 +40,53 @@ import com.example.finansmart.ui.theme.FinanSmartTheme
 fun NovaTransacaoScreen(
     onVoltar: () -> Unit = {},
     onSalvou: () -> Unit = {},
+    // null = nova transacao. Com um id = EDITAR essa transacao (mesma tela).
+    transacaoId: Long? = null,
     modifier: Modifier = Modifier,
 ) {
     val c = FinanSmartTheme.colors
     val t = FinanSmartTheme.type
 
-    var tipo by remember { mutableStateOf(TipoTransacao.DESPESA) }
+    // Modo edicao: os campos comecam com os valores da transacao.
+    // remember(chave): so recalcula o valor inicial se for OUTRA transacao.
+    val original = transacaoId?.let { Repositorio.buscarTransacao(it) }
+    val editando = original != null
+    val chave = original?.id
+
+    var tipo by remember(chave) { mutableStateOf(original?.tipo ?: TipoTransacao.DESPESA) }
 
     // Guardamos so os DIGITOS que a pessoa teclou ("5000"). O "R$ 50,00"
     // e desenhado a partir deles. Ver CampoDeValor, no fim do arquivo.
-    var digitos by remember { mutableStateOf("") }
+    var digitos by remember(chave) {
+        mutableStateOf(original?.let { Math.round(it.valor * 100).toString() } ?: "")
+    }
 
-    var descricao by remember { mutableStateOf("") }
+    // Na edicao: se a descricao for igual ao nome da categoria, ela foi
+    // preenchida automaticamente ao salvar -- entao o campo volta vazio.
+    var descricao by remember(chave) {
+        mutableStateOf(
+            original?.let { o ->
+                o.descricao.takeIf { d ->
+                    d != o.categoria.rotulo && CategoriaReceita.entries.none { it.rotulo == d }
+                }
+            } ?: ""
+        )
+    }
     // Comecam SEM nada escolhido: a regra e "categoria OU descricao",
     // entao deixar uma pre-selecionada tornaria a regra inutil.
-    var categoriaDespesa by remember { mutableStateOf<Categoria?>(null) }
-    var categoriaReceita by remember { mutableStateOf<CategoriaReceita?>(null) }
-    var data by remember { mutableStateOf("19/09/2026") }
-    var observacao by remember { mutableStateOf("") }
+    var categoriaDespesa by remember(chave) {
+        mutableStateOf(original?.categoria?.takeIf { it != Categoria.RECEITA })
+    }
+    // A categoria de receita nao e gravada; ela e reconhecida pelo emoji.
+    var categoriaReceita by remember(chave) {
+        mutableStateOf(
+            original?.takeIf { it.tipo == TipoTransacao.RECEITA }
+                ?.let { o -> CategoriaReceita.entries.firstOrNull { it.emoji == o.emoji } }
+        )
+    }
+    // Antes era "19/09/2026" fixo (a data do prototipo). Agora: hoje.
+    var data by remember(chave) { mutableStateOf(original?.dataFormatada ?: hojeFormatado()) }
+    var observacao by remember(chave) { mutableStateOf(original?.observacao ?: "") }
     var tentouSalvar by remember { mutableStateOf(false) }
 
     val ehReceita = tipo == TipoTransacao.RECEITA
@@ -84,7 +113,10 @@ fun NovaTransacaoScreen(
         ) {
             Spacer(Modifier.height(6.dp))
 
-            CabecalhoTela(titulo = "Nova transação", aoVoltar = onVoltar)
+            CabecalhoTela(
+                titulo = if (editando) "Editar transação" else "Nova transação",
+                aoVoltar = onVoltar
+            )
 
             /* ---- receita / despesa ---- */
             Spacer(Modifier.height(Dimens.Space20))
@@ -178,7 +210,7 @@ fun NovaTransacaoScreen(
                 rotulo = "Data",
                 valor = data,
                 aoMudarValor = { data = it },
-                placeholder = "19/09/2026",
+                placeholder = "dd/mm/aaaa",
                 conteudoFinal = { Text(text = "📅", fontSize = 15.sp) }
             )
 
@@ -195,10 +227,13 @@ fun NovaTransacaoScreen(
             val cat = categoriaDespesa
             if (!ehReceita && cat != null) {
                 Spacer(Modifier.height(Dimens.Space20))
-                val jaGasto = Repositorio.gastosPorCategoria()
-                    .firstOrNull { it.first == cat }?.second ?: 0.0
-                val planejado = 400.0
-                val percentual = (jaGasto / planejado * 100).toInt()
+                // Antes: "X% do planejado", com um planejado de R$ 400 inventado.
+                // O app nao tem orcamento por categoria, entao mostramos o
+                // valor real ja gasto nela no mes atual.
+                val jaGasto = Repositorio.transacoes
+                    .doMes(MesAno.atual())
+                    .filter { it.tipo == TipoTransacao.DESPESA && it.categoria == cat }
+                    .sumOf { it.valor }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -210,8 +245,10 @@ fun NovaTransacaoScreen(
                     Text(text = "💡", fontSize = 16.sp)
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        text = "Você já gastou $percentual% do planejado em " +
-                                "${cat.rotulo} neste mês.",
+                        text = if (jaGasto > 0.0)
+                            "Você já gastou ${formatarMoeda(jaGasto)} em ${cat.rotulo} neste mês."
+                        else
+                            "Este será seu primeiro gasto com ${cat.rotulo} neste mês.",
                         style = t.Caption,
                         color = c.ink2
                     )
@@ -247,28 +284,58 @@ fun NovaTransacaoScreen(
                         tentouSalvar = true
                         if (podeSalvar) {
                             val partes = data.split("/")
-                            Repositorio.adicionarTransacao(
-                                descricao = descricao.trim().ifBlank {
-                                    if (ehReceita) categoriaReceita?.rotulo.orEmpty()
-                                    else categoriaDespesa?.rotulo.orEmpty()
-                                },
-                                valor = valor,
-                                tipo = tipo,
-                                categoria = if (ehReceita) Categoria.RECEITA
-                                else categoriaDespesa ?: Categoria.OUTROS,
-                                emoji = if (ehReceita) categoriaReceita?.emoji ?: "💰"
-                                else categoriaDespesa?.emoji ?: "⋯",
-                                dia = partes.getOrNull(0)?.toIntOrNull() ?: 19,
-                                mes = partes.getOrNull(1)?.toIntOrNull() ?: 9,
-                                ano = partes.getOrNull(2)?.toIntOrNull() ?: 2026,
-                                observacao = observacao.trim()
-                            )
+                            // Se a data digitada estiver incompleta, usa a de hoje.
+                            val (diaHoje, mesHoje, anoHoje) = hoje()
+                            val descricaoFinal = descricao.trim().ifBlank {
+                                if (ehReceita) categoriaReceita?.rotulo.orEmpty()
+                                else categoriaDespesa?.rotulo.orEmpty()
+                            }
+                            val categoriaFinal = if (ehReceita) Categoria.RECEITA
+                            else categoriaDespesa ?: Categoria.OUTROS
+                            val emojiFinal = if (ehReceita) categoriaReceita?.emoji ?: "💰"
+                            else categoriaDespesa?.emoji ?: "⋯"
+                            val dia = partes.getOrNull(0)?.toIntOrNull()?.coerceIn(1, 31) ?: diaHoje
+                            val mes = partes.getOrNull(1)?.toIntOrNull()?.coerceIn(1, 12) ?: mesHoje
+                            val ano = partes.getOrNull(2)?.toIntOrNull() ?: anoHoje
+
+                            if (original != null) {
+                                Repositorio.atualizarTransacao(
+                                    original.copy(
+                                        descricao = descricaoFinal,
+                                        valor = valor,
+                                        tipo = tipo,
+                                        categoria = categoriaFinal,
+                                        emoji = emojiFinal,
+                                        dia = dia,
+                                        mes = mes,
+                                        ano = ano,
+                                        observacao = observacao.trim(),
+                                        formaPagamento = if (ehReceita) "Depósito" else "Cartão",
+                                    )
+                                )
+                            } else {
+                                Repositorio.adicionarTransacao(
+                                    descricao = descricaoFinal,
+                                    valor = valor,
+                                    tipo = tipo,
+                                    categoria = categoriaFinal,
+                                    emoji = emojiFinal,
+                                    dia = dia,
+                                    mes = mes,
+                                    ano = ano,
+                                    observacao = observacao.trim()
+                                )
+                            }
                             onSalvou()
                         }
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "Adicionar transação", style = t.BotaoGrande, color = Color.White)
+                Text(
+                    text = if (editando) "Salvar alterações" else "Adicionar transação",
+                    style = t.BotaoGrande,
+                    color = Color.White
+                )
             }
         }
     }

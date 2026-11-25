@@ -17,7 +17,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.finansmart.data.MESES_LONGOS
+import com.example.finansmart.data.MesAno
+import com.example.finansmart.data.despesasPorCategoria
+import com.example.finansmart.data.doMes
+import com.example.finansmart.data.somaDespesas
+import com.example.finansmart.data.somaReceitas
 import com.example.finansmart.data.Repositorio
 import com.example.finansmart.data.TipoTransacao
 import com.example.finansmart.data.formatarMoeda
@@ -46,9 +50,12 @@ fun NotificacoesScreen(
     val t = FinanSmartTheme.type
 
     // Os avisos sao montados a partir dos dados reais do app.
-    val despesas = Repositorio.totalDespesas()
-    val receitas = Repositorio.totalReceitas()
-    val maiorCategoria = Repositorio.gastosPorCategoria().firstOrNull()
+    // Os avisos falam "neste mes", entao as contas sao do mes atual.
+    val mesAtual = MesAno.atual()
+    val doMes = Repositorio.transacoes.doMes(mesAtual)
+    val despesas = doMes.somaDespesas()
+    val receitas = doMes.somaReceitas()
+    val maiorCategoria = doMes.despesasPorCategoria().firstOrNull()
     val metaQuaseLa = Repositorio.metasEmAndamento().maxByOrNull { it.progresso }
     val ultimaReceita = Repositorio.transacoes
         .firstOrNull { it.tipo == TipoTransacao.RECEITA }
@@ -91,16 +98,22 @@ fun NotificacoesScreen(
                 )
             )
         }
-        add(
-            Aviso(
-                emoji = "📊",
-                titulo = "Resumo de ${MESES_LONGOS[8].lowercase()}",
-                texto = "Entraram ${formatarMoeda(receitas)} e saíram " +
-                        "${formatarMoeda(despesas)}. Seu saldo está positivo.",
-                quando = "01/10",
-                naoLido = false,
+        // So mostra o resumo se o mes tiver algum lancamento.
+        if (doMes.isNotEmpty()) {
+            val saldoDoMes = receitas - despesas
+            add(
+                Aviso(
+                    emoji = "📊",
+                    titulo = "Resumo de ${mesAtual.nomeLongo.lowercase()}",
+                    texto = "Entraram ${formatarMoeda(receitas)} e saíram " +
+                            "${formatarMoeda(despesas)}. " +
+                            if (saldoDoMes >= 0) "Seu saldo do mês está positivo."
+                            else "Você gastou ${formatarMoeda(-saldoDoMes)} a mais do que recebeu.",
+                    quando = "Este mês",
+                    naoLido = false,
+                )
             )
-        )
+        }
     }
 
     MolduraDeTela(titulo = "Notificações", onVoltar = onVoltar, modifier = modifier) {

@@ -85,9 +85,15 @@ object Repositorio {
             transacaoRepo.observar(uid)
                 .catch { erro -> Log.e("Repositorio", "Erro ao ler transacoes", erro) }
                 .collect { listaDoFirestore ->
+                    // Ordena pela DATA da transacao (mais recente primeiro).
+                    // O Firestore entrega por criadoEm; se a pessoa lancar hoje
+                    // uma compra de ontem, ela precisa aparecer em "ontem".
+                    // sortedByDescending e "estavel": no mesmo dia, mantem a
+                    // ordem do Firestore (a mais nova primeiro).
+                    val ordenada = listaDoFirestore.sortedByDescending { it.chaveDoDia }
                     // Troca o conteudo da lista: as telas se redesenham sozinhas.
                     transacoes.clear()
-                    transacoes.addAll(listaDoFirestore)
+                    transacoes.addAll(ordenada)
                 }
         }
 
@@ -209,6 +215,17 @@ object Repositorio {
             transacaoRepo.adicionar(uid, nova)
         } else {
             transacoes.add(0, nova)              // sem login: so na memoria
+        }
+    }
+
+    /** Salva uma transacao editada (mesmo id, campos novos). */
+    fun atualizarTransacao(transacao: Transacao) {
+        val uid = uidConectado
+        if (uid != null) {
+            transacaoRepo.atualizar(uid, transacao)   // o ouvinte atualiza a lista
+        } else {
+            val posicao = transacoes.indexOfFirst { it.id == transacao.id }
+            if (posicao >= 0) transacoes[posicao] = transacao
         }
     }
 

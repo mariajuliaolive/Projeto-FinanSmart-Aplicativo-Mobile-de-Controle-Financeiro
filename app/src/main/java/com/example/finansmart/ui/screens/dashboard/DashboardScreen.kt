@@ -42,10 +42,14 @@ fun DashboardScreen(
     var saldoVisivel by remember { mutableStateOf(true) }
 
     val perfil = Repositorio.perfil.value
-    val receitas = Repositorio.totalReceitas()
-    val despesas = Repositorio.totalDespesas()
+    // O SALDO e de todos os tempos: e o dinheiro que a pessoa tem.
+    // Receitas, despesas e o grafico sao DO MES ATUAL, como dizem os titulos.
+    val mesAtual = MesAno.atual()
+    val doMes = Repositorio.transacoes.doMes(mesAtual)
+    val receitas = doMes.somaReceitas()
+    val despesas = doMes.somaDespesas()
     val saldo = Repositorio.saldo()
-    val porCategoria = Repositorio.gastosPorCategoria()
+    val porCategoria = doMes.despesasPorCategoria()
     val ultimas = Repositorio.transacoes.take(3)
 
     val percentualGasto = if (receitas > 0) (despesas / receitas * 100).toInt() else 0
@@ -183,7 +187,7 @@ fun DashboardScreen(
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = MESES_LONGOS[8],
+                    text = MESES_LONGOS[mesAtual.mes - 1],
                     style = t.MonoLabel,
                     color = c.primaryInk
                 )

@@ -214,9 +214,12 @@ fun TransacoesScreen(
 private fun tituloDoDia(transacao: Transacao): String {
     val mes = MESES_CURTOS[(transacao.mes - 1).coerceIn(0, 11)].uppercase()
     val dia = "%02d".format(transacao.dia)
-    return when (transacao.dia) {
-        19 -> "HOJE · $dia $mes"
-        18 -> "ONTEM · $dia $mes"
+    // Antes: dia 19 era sempre "HOJE" (a data do prototipo).
+    // Agora compara dia, mes E ano com a data do celular.
+    val data = Triple(transacao.dia, transacao.mes, transacao.ano)
+    return when (data) {
+        hoje() -> "HOJE · $dia $mes"
+        ontem() -> "ONTEM · $dia $mes"
         else -> "$dia $mes"
     }
 }

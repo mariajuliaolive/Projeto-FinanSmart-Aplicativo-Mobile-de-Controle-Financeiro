@@ -3,6 +3,13 @@ package com.example.finansmart.ui.screens.relatorios
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,10 +44,34 @@ fun RelatoriosScreen(modifier: Modifier = Modifier) {
     val c = FinanSmartTheme.colors
     val t = FinanSmartTheme.type
 
-    val receitas = Repositorio.totalReceitas()
-    val despesas = Repositorio.totalDespesas()
-    val saldo = Repositorio.saldo()
-    val porCategoria = Repositorio.gastosPorCategoria()
+    // O mes que esta sendo visto. Comeca no mes atual; as setas mudam.
+    var periodo by remember { mutableStateOf(MesAno.atual()) }
+    val ehMesAtual = periodo == MesAno.atual()
+
+    // Tudo abaixo vem das transacoes REAIS do periodo escolhido.
+    val doMes = Repositorio.transacoes.doMes(periodo)
+    val receitas = doMes.somaReceitas()
+    val despesas = doMes.somaDespesas()
+    val saldo = receitas - despesas
+    val porCategoria = doMes.despesasPorCategoria()
+
+    // Os 4 meses que terminam no periodo (ex.: ago, set, out, nov).
+    val ultimos4 = generateSequence(periodo) { it.anterior() }.take(4).toList().reversed()
+    val meses = ultimos4.map { m ->
+        val lista = Repositorio.transacoes.doMes(m)
+        Mes(m.nomeCurto.replaceFirstChar { it.uppercase() }, lista.somaReceitas(), lista.somaDespesas())
+    }
+
+    // Comparacao com o mes anterior: so faz sentido se houve gasto la.
+    val despesasAnterior = Repositorio.transacoes.doMes(periodo.anterior()).somaDespesas()
+    val variacao = if (despesasAnterior > 0) (despesas - despesasAnterior) / despesasAnterior else null
+
+    // Linha: gastos de cada semana, divididos pela maior (fica entre 0 e 1).
+    val porSemana = doMes.despesasPorSemana()
+    val maiorSemana = porSemana.maxOrNull()?.takeIf { it > 0 } ?: 1.0
+    // 0.08 + 0.82*x: deixa uma margem em cima e embaixo, para as bolinhas
+    // da linha nao ficarem cortadas na borda do grafico.
+    val pontos = porSemana.map { (0.08 + 0.82 * (it / maiorSemana)).toFloat() }
 
     Column(
         modifier = modifier
@@ -50,18 +81,24 @@ fun RelatoriosScreen(modifier: Modifier = Modifier) {
     ) {
         Spacer(Modifier.height(6.dp))
 
-        // A caixinha "Este mes" saiu: nao filtrava nada, porque o app so
-        // tem lancamentos de um mes. O periodo passou a ser o subtitulo.
         Text(text = "Relatórios", style = t.TituloLista, color = c.ink)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = MESES_LONGOS[8].lowercase().replaceFirstChar { it.uppercase() } + " de 2026",
-            style = t.Body,
-            color = c.ink2
-        )
+        Spacer(Modifier.height(Dimens.Space8))
+
+        /* ---- seletor de mes:  ‹  Novembro de 2026  › ---- */
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            SetaDoPeriodo("‹", habilitada = true) { periodo = periodo.anterior() }
+            Text(
+                text = "${periodo.nomeLongo} de ${periodo.ano}",
+                style = t.Body.copy(fontWeight = FontWeight.SemiBold),
+                color = c.ink,
+                modifier = Modifier.padding(horizontal = Dimens.Space8)
+            )
+            // Nao deixa ir para o futuro: nao existe relatorio de mes que nao chegou.
+            SetaDoPeriodo("›", habilitada = !ehMesAtual) { periodo = periodo.proximo() }
+        }
 
         /* ---- cards do topo ---- */
-        Spacer(Modifier.height(Dimens.Space20))
+        Spacer(Modifier.height(Dimens.Space16))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CartaoPequeno("Receitas", formatarMoedaCurta(receitas), c.pos, Modifier.weight(1f))
             CartaoPequeno("Despesas", formatarMoedaCurta(despesas), c.neg, Modifier.weight(1f))
@@ -77,7 +114,7 @@ fun RelatoriosScreen(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Saldo do período",
+                text = "Saldo do mês",
                 style = t.Caption,
                 color = c.panelSub,
                 modifier = Modifier.weight(1f)
@@ -90,43 +127,60 @@ fun RelatoriosScreen(modifier: Modifier = Modifier) {
         Cartao {
             Text(text = "Gastos por categoria", style = t.SectionTitle, color = c.ink)
             Spacer(Modifier.height(Dimens.Space16))
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                RoscaDeCategorias(
-                    fatias = porCategoria,
-                    total = despesas,
-                    corDoMiolo = c.surface,
-                    modifier = Modifier.size(132.dp)
+
+            if (porCategoria.isEmpty()) {
+                // Sem despesas no mes: um aviso em vez de uma rosca vazia.
+                Text(
+                    text = "Nenhuma despesa em ${periodo.nomeLongo.lowercase()}.",
+                    style = t.Body,
+                    color = c.ink2
                 )
-
-                Spacer(Modifier.height(Dimens.Space18))
-
-                // Legenda embaixo, em duas colunas largas: assim os nomes
-                // cabem inteiros e nao ficam por baixo do grafico.
+            } else {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(9.dp)
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    porCategoria.chunked(2).forEach { dupla ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Space12)) {
-                            dupla.forEach { (categoria, _) ->
-                                Row(
-                                    modifier = Modifier.weight(1f),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    MarcadorDeLegenda(cor = categoria.cor)
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        text = categoria.rotulo,
-                                        style = t.Rotulo115,
-                                        color = c.ink,
-                                        maxLines = 1
-                                    )
+                    RoscaDeCategorias(
+                        fatias = porCategoria,
+                        total = despesas,
+                        corDoMiolo = c.surface,
+                        modifier = Modifier.size(132.dp)
+                    )
+
+                    Spacer(Modifier.height(Dimens.Space18))
+
+                    // Legenda em duas colunas, agora com o valor de cada categoria.
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(9.dp)
+                    ) {
+                        porCategoria.chunked(2).forEach { dupla ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(Dimens.Space12)) {
+                                dupla.forEach { (categoria, valor) ->
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        MarcadorDeLegenda(cor = categoria.cor)
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            text = categoria.rotulo,
+                                            style = t.Rotulo115,
+                                            color = c.ink,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Text(
+                                            text = formatarMoedaCurta(valor),
+                                            style = t.Rotulo115,
+                                            color = c.ink2,
+                                            maxLines = 1
+                                        )
+                                    }
                                 }
+                                if (dupla.size == 1) Spacer(Modifier.weight(1f))
                             }
-                            if (dupla.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
                 }
@@ -143,21 +197,16 @@ fun RelatoriosScreen(modifier: Modifier = Modifier) {
                     color = c.ink,
                     modifier = Modifier.weight(1f)
                 )
-                Text(text = "JUN–SET", style = t.MonoLabel, color = c.ink3)
+                // "AGO–NOV": o primeiro e o ultimo dos 4 meses.
+                Text(
+                    text = "${ultimos4.first().nomeCurto}–${ultimos4.last().nomeCurto}".uppercase(),
+                    style = t.MonoLabel,
+                    color = c.ink3
+                )
             }
             Spacer(Modifier.height(Dimens.Space18))
 
-            /*
-             * Os quatro meses do prototipo. Como o app so tem os dados de
-             * setembro, os tres meses anteriores ficam com os valores do
-             * desenho -- um historico de exemplo.
-             */
-            val meses = listOf(
-                Mes("Jun", 3000.0, 1180.0),
-                Mes("Jul", 3000.0, 1780.0),
-                Mes("Ago", 3000.0, 1400.0),
-                Mes("Set", receitas, despesas),
-            )
+            // A maior barra ocupa a altura toda; as outras, proporcionais.
             val maior = meses.maxOf { maxOf(it.receita, it.despesa) }.coerceAtLeast(1.0)
 
             Row(
@@ -182,9 +231,8 @@ fun RelatoriosScreen(modifier: Modifier = Modifier) {
                         Text(
                             text = mes.nome,
                             style = t.Rotulo11.copy(
-                                fontWeight = if (indice == meses.lastIndex)
-                                    androidx.compose.ui.text.font.FontWeight.SemiBold
-                                else androidx.compose.ui.text.font.FontWeight.Medium
+                                fontWeight = if (indice == meses.lastIndex) FontWeight.SemiBold
+                                else FontWeight.Medium
                             ),
                             color = if (indice == meses.lastIndex) c.ink else c.ink2
                         )
@@ -204,37 +252,77 @@ fun RelatoriosScreen(modifier: Modifier = Modifier) {
         Cartao {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    text = "Evolução dos gastos",
+                    text = "Gastos por semana",
                     style = t.SectionTitle,
                     color = c.ink,
                     modifier = Modifier.weight(1f)
                 )
-                Text(text = "−32% vs. ago", style = t.Rotulo115, color = c.pos)
-            }
-            LinhaDeEvolucao(
-                pontos = listOf(0.78f, 0.58f, 0.67f, 0.36f, 0.22f),
-                corLinha = c.primary,
-                corArea = c.primarySoft,
-                corPonto = c.surface,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(90.dp)
-                    .padding(top = 14.dp)
-            )
-            Spacer(Modifier.height(Dimens.Space8))
-            Row(modifier = Modifier.fillMaxWidth()) {
-                listOf("Sem 1", "Sem 2", "Sem 3", "Sem 4").forEach { rotulo ->
+                // "−32% vs. out": gastar MENOS e bom (verde); MAIS, vermelho.
+                if (variacao != null) {
+                    val pct = (variacao * 100).toInt()
                     Text(
-                        text = rotulo,
-                        style = t.Rotulo11,
-                        color = c.ink3,
-                        modifier = Modifier.weight(1f)
+                        text = (if (pct > 0) "+" else if (pct < 0) "−" else "") +
+                                "${kotlin.math.abs(pct)}% vs. ${periodo.anterior().nomeCurto}",
+                        style = t.Rotulo115,
+                        color = if (pct <= 0) c.pos else c.neg
                     )
+                }
+            }
+            if (despesas == 0.0) {
+                Spacer(Modifier.height(Dimens.Space12))
+                Text(text = "Sem gastos neste mês.", style = t.Body, color = c.ink2)
+            } else {
+                LinhaDeEvolucao(
+                    pontos = pontos,
+                    corLinha = c.primary,
+                    corArea = c.primarySoft,
+                    corPonto = c.surface,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(90.dp)
+                        .padding(top = 14.dp)
+                )
+                Spacer(Modifier.height(Dimens.Space8))
+                // Os rotulos alinhados com os 4 pontos (inicio, 1/3, 2/3, fim).
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    listOf("1–7", "8–14", "15–21", "22+").forEachIndexed { i, rotulo ->
+                        Text(
+                            text = rotulo,
+                            style = t.Rotulo11,
+                            color = c.ink3,
+                            textAlign = when (i) {
+                                0 -> TextAlign.Start
+                                3 -> TextAlign.End
+                                else -> TextAlign.Center
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
         }
 
         Spacer(Modifier.height(22.dp))
+    }
+}
+
+/** As setinhas ‹ › do seletor de mes. */
+@Composable
+private fun SetaDoPeriodo(simbolo: String, habilitada: Boolean, aoClicar: () -> Unit) {
+    val c = FinanSmartTheme.colors
+    Box(
+        Modifier
+            .size(32.dp)
+            .clip(RoundedCornerShape(Dimens.RadiusPill))
+            .background(c.surface)
+            .clickable(enabled = habilitada, onClick = aoClicar),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = simbolo,
+            fontSize = 20.sp,
+            color = if (habilitada) c.ink else c.ink3.copy(alpha = 0.4f)
+        )
     }
 }
 

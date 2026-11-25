@@ -64,6 +64,27 @@ class TransacaoRepository(
         colecao(uid).document(transacao.id.toString()).set(transacao.paraMapa())
     }
 
+    /**
+     * Atualiza uma transacao que ja existe. Como nas metas, update() e
+     * nao set(): assim o "criadoEm" original e preservado.
+     */
+    fun atualizar(uid: String, transacao: Transacao) {
+        colecao(uid).document(transacao.id.toString()).update(
+            mapOf(
+                "descricao" to transacao.descricao,
+                "valor" to transacao.valor,
+                "tipo" to transacao.tipo.name,
+                "categoria" to transacao.categoria.name,
+                "emoji" to transacao.emoji,
+                "dia" to transacao.dia,
+                "mes" to transacao.mes,
+                "ano" to transacao.ano,
+                "observacao" to transacao.observacao,
+                "formaPagamento" to transacao.formaPagamento,
+            )
+        )
+    }
+
     fun remover(uid: String, id: Long) {
         colecao(uid).document(id.toString()).delete()
     }

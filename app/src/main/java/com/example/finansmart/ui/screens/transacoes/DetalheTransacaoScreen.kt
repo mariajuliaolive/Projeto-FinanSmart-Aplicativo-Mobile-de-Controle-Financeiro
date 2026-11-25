@@ -32,6 +32,7 @@ import com.example.finansmart.ui.theme.FinanSmartTheme
 fun DetalheTransacaoScreen(
     transacaoId: Long,
     onVoltar: () -> Unit = {},
+    onEditar: () -> Unit = {},
     onExcluiu: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -59,9 +60,16 @@ fun DetalheTransacaoScreen(
     }
 
     val ehReceita = transacao.tipo == TipoTransacao.RECEITA
-    val gastoNaCategoria = Repositorio.gastosPorCategoria()
-        .firstOrNull { it.first == transacao.categoria }?.second ?: 0.0
-    val planejado = 400.0
+    // O mes DA TRANSACAO (antes: setembro fixo, com "R$ 400 planejados"
+    // inventados). Agora comparamos com o total real de despesas do mes.
+    val mesDaTransacao = MesAno(transacao.mes, transacao.ano)
+    val despesasDoMes = Repositorio.transacoes.doMes(mesDaTransacao)
+        .filter { it.tipo == TipoTransacao.DESPESA }
+    val gastoNaCategoria = despesasDoMes
+        .filter { it.categoria == transacao.categoria }
+        .sumOf { it.valor }
+    val totalDoMes = despesasDoMes.sumOf { it.valor }
+    val fatiaDoMes = if (totalDoMes > 0) gastoNaCategoria / totalDoMes else 0.0
 
     Column(modifier.fillMaxSize().background(c.bg)) {
 
@@ -177,7 +185,7 @@ fun DetalheTransacaoScreen(
                         .padding(horizontal = 18.dp, vertical = Dimens.Space16)
                 ) {
                     Text(
-                        text = "${transacao.categoria.rotulo} em setembro",
+                        text = "${transacao.categoria.rotulo} em ${mesDaTransacao.nomeLongo.lowercase()}",
                         style = t.ListTitle.copy(fontSize = 13.sp),
                         color = c.primaryInk
                     )
@@ -190,14 +198,14 @@ fun DetalheTransacaoScreen(
                         )
                         Spacer(Modifier.width(Dimens.Space8))
                         Text(
-                            text = "de ${formatarMoedaCurta(planejado)} planejados",
+                            text = "${(fatiaDoMes * 100).toInt()}% dos gastos do mês",
                             style = t.Caption,
                             color = c.ink2
                         )
                     }
                     Spacer(Modifier.height(Dimens.Space12))
                     BarraDeProgresso(
-                        progresso = (gastoNaCategoria / planejado).toFloat(),
+                        progresso = fatiaDoMes.toFloat(),
                         altura = 8.dp
                     )
                 }
@@ -210,7 +218,7 @@ fun DetalheTransacaoScreen(
                     texto = "✏️ Editar",
                     cor = c.ink,
                     corBorda = c.line,
-                    aoClicar = {},
+                    aoClicar = onEditar,   // antes: {} -- o botao nao fazia nada
                     modifier = Modifier.weight(1f)
                 )
                 BotaoDeAcao(
