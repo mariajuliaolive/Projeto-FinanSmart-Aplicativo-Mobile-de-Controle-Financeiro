@@ -20,6 +20,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.finansmart.data.Repositorio
+import com.example.finansmart.data.formatarMoeda
 import com.example.finansmart.data.formatarMoedaCurta
 import com.example.finansmart.data.lerValorDigitado
 import com.example.finansmart.ui.components.CabecalhoTela
@@ -28,6 +29,7 @@ import com.example.finansmart.ui.components.Interruptor
 import com.example.finansmart.ui.theme.Dimens
 import com.example.finansmart.ui.theme.FinanSmartTheme
 import kotlin.math.ceil
+import java.util.Calendar
 import kotlin.math.max
 
 /* TELA 11 - NOVA META */
@@ -41,17 +43,35 @@ private val ICONES = listOf(
 fun NovaMetaScreen(
     onVoltar: () -> Unit = {},
     onCriou: () -> Unit = {},
+    // null = criar meta nova. Com um id = EDITAR essa meta (mesma tela!).
+    metaId: Long? = null,
     modifier: Modifier = Modifier,
 ) {
     val c = FinanSmartTheme.colors
     val t = FinanSmartTheme.type
 
-    var icone by remember { mutableStateOf(ICONES.first()) }
-    var nome by remember { mutableStateOf("") }
-    var objetivoTexto by remember { mutableStateOf("") }
-    var prazo by remember { mutableStateOf("12/2026") }
-    var guardadoTexto by remember { mutableStateOf("") }
-    var reservaAutomatica by remember { mutableStateOf(true) }
+    // No modo edicao, os campos comecam preenchidos com a meta atual.
+    // O remember(metaEditada?.id) so recalcula se for OUTRA meta -- assim
+    // o que a pessoa digita nao e apagado a cada redesenho.
+    val metaEditada = metaId?.let { Repositorio.buscarMeta(it) }
+    val editando = metaEditada != null
+
+    var icone by remember(metaEditada?.id) { mutableStateOf(metaEditada?.emoji ?: ICONES.first()) }
+    var nome by remember(metaEditada?.id) { mutableStateOf(metaEditada?.nome ?: "") }
+    var objetivoTexto by remember(metaEditada?.id) {
+        mutableStateOf(metaEditada?.let { formatarMoeda(it.objetivo) } ?: "")
+    }
+    var prazo by remember(metaEditada?.id) {
+        mutableStateOf(
+            metaEditada?.let { "%02d/%04d".format(it.prazoMes, it.prazoAno) } ?: "12/2026"
+        )
+    }
+    var guardadoTexto by remember(metaEditada?.id) {
+        mutableStateOf(metaEditada?.let { formatarMoeda(it.guardado) } ?: "")
+    }
+    var reservaAutomatica by remember(metaEditada?.id) {
+        mutableStateOf(metaEditada?.reservaAutomatica ?: true)
+    }
 
     val objetivo = lerValorDigitado(objetivoTexto)
     val guardado = lerValorDigitado(guardadoTexto)
@@ -74,7 +94,7 @@ fun NovaMetaScreen(
         ) {
             Spacer(Modifier.height(6.dp))
 
-            CabecalhoTela(titulo = "Nova meta", aoVoltar = onVoltar)
+            CabecalhoTela(titulo = if (editando) "Editar meta" else "Nova meta", aoVoltar = onVoltar)
 
             /* ---- icone ---- */
             Spacer(Modifier.height(Dimens.Space22))
@@ -224,31 +244,61 @@ fun NovaMetaScreen(
                     .background(if (podeCriar) c.primaryFill else c.primaryFill.copy(alpha = 0.4f))
                     .clickable(enabled = podeCriar) {
                         val partes = prazo.split("/")
-                        Repositorio.adicionarMeta(
-                            nome = nome.trim(),
-                            emoji = icone,
-                            objetivo = objetivo,
-                            guardado = guardado,
-                            prazoMes = partes.getOrNull(0)?.toIntOrNull() ?: 12,
-                            prazoAno = partes.getOrNull(1)?.toIntOrNull() ?: 2026,
-                            reservaAutomatica = reservaAutomatica
-                        )
+                        val prazoMes = partes.getOrNull(0)?.toIntOrNull() ?: 12
+                        val prazoAno = partes.getOrNull(1)?.toIntOrNull() ?: 2026
+
+                        if (metaEditada != null) {
+                            // copy(): mesma meta (mesmo id), so com os campos novos.
+                            Repositorio.atualizarMeta(
+                                metaEditada.copy(
+                                    nome = nome.trim(),
+                                    emoji = icone,
+                                    objetivo = objetivo,
+                                    guardado = guardado,
+                                    prazoMes = prazoMes,
+                                    prazoAno = prazoAno,
+                                    reservaAutomatica = reservaAutomatica,
+                                )
+                            )
+                        } else {
+                            Repositorio.adicionarMeta(
+                                nome = nome.trim(),
+                                emoji = icone,
+                                objetivo = objetivo,
+                                guardado = guardado,
+                                prazoMes = prazoMes,
+                                prazoAno = prazoAno,
+                                reservaAutomatica = reservaAutomatica
+                            )
+                        }
                         onCriou()
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "Criar meta", style = t.BotaoGrande, color = Color.White)
+                Text(
+                    text = if (editando) "Salvar alterações" else "Criar meta",
+                    style = t.BotaoGrande,
+                    color = Color.White
+                )
             }
         }
     }
 }
 
-/** Quantos meses faltam de setembro/2026 ate o prazo "MM/AAAA". */
+/**
+ * Quantos meses faltam de HOJE ate o prazo "MM/AAAA".
+ * Antes a conta partia de setembro/2026 fixo (a data do prototipo);
+ * agora usa o mes atual do celular. Calendar.MONTH conta de 0 a 11,
+ * por isso o +1.
+ */
 private fun mesesAte(prazo: String): Int {
     val partes = prazo.split("/")
     val mes = partes.getOrNull(0)?.toIntOrNull() ?: return 12
     val ano = partes.getOrNull(1)?.toIntOrNull() ?: return 12
-    val total = (ano - 2026) * 12 + (mes - 9)
+    val hoje = Calendar.getInstance()
+    val mesAtual = hoje.get(Calendar.MONTH) + 1
+    val anoAtual = hoje.get(Calendar.YEAR)
+    val total = (ano - anoAtual) * 12 + (mes - mesAtual)
     return max(total, 1)
 }
 

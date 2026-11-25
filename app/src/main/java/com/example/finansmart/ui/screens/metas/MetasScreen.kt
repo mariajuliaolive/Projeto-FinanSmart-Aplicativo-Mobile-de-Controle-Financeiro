@@ -30,6 +30,7 @@ import com.example.finansmart.ui.theme.FinanSmartTheme
 @Composable
 fun MetasScreen(
     onNovaMeta: () -> Unit = {},
+    onAbrirMeta: (id: Long) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val c = FinanSmartTheme.colors
@@ -64,7 +65,7 @@ fun MetasScreen(
 
             metas.forEachIndexed { indice, meta ->
                 if (indice > 0) Spacer(Modifier.height(Dimens.Space12))
-                CartaoDeMeta(meta)
+                CartaoDeMeta(meta, aoClicar = { onAbrirMeta(meta.id) })
             }
 
             Spacer(Modifier.height(Dimens.Space20))
@@ -104,12 +105,17 @@ fun MetasScreen(
 }
 
 @Composable
-private fun CartaoDeMeta(meta: Meta) {
+private fun CartaoDeMeta(meta: Meta, aoClicar: () -> Unit) {
     val c = FinanSmartTheme.colors
     val t = FinanSmartTheme.type
     val corDoProgresso = if (meta.concluida) c.pos else c.primaryFill
 
-    Cartao {
+    // clip antes do clickable: o efeito do toque respeita os cantos arredondados.
+    Cartao(
+        modifier = Modifier
+            .clip(RoundedCornerShape(Dimens.RadiusCardMedium))
+            .clickable { aoClicar() }
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier

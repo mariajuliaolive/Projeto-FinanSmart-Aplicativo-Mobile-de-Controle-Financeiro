@@ -42,6 +42,32 @@ class MetaRepository(
     fun adicionar(uid: String, meta: Meta) {
         colecao(uid).document(meta.id.toString()).set(meta.paraMapa())
     }
+
+    /*
+     * Atualiza uma meta que ja existe.
+     *
+     * Por que update() e nao set() como no adicionar? O set() com o
+     * paraMapa() gravaria um "criadoEm" NOVO -- e a meta editada pularia
+     * para o fim da lista. O update() troca so os campos que passamos
+     * e deixa o criadoEm original intacto.
+     */
+    fun atualizar(uid: String, meta: Meta) {
+        colecao(uid).document(meta.id.toString()).update(
+            mapOf(
+                "nome" to meta.nome,
+                "emoji" to meta.emoji,
+                "objetivo" to meta.objetivo,
+                "guardado" to meta.guardado,
+                "prazoMes" to meta.prazoMes,
+                "prazoAno" to meta.prazoAno,
+                "reservaAutomatica" to meta.reservaAutomatica,
+            )
+        )
+    }
+
+    fun remover(uid: String, id: Long) {
+        colecao(uid).document(id.toString()).delete()
+    }
 }
 
 /* ---------------- conversao Meta <-> documento ---------------- */

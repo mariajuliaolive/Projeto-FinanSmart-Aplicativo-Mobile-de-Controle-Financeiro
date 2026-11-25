@@ -35,4 +35,14 @@ object Rotas {
     const val DETALHE_TRANSACAO = "detalhe_transacao/{id}"
 
     fun detalheTransacao(id: Long) = "detalhe_transacao/$id"
+
+    /** Mesmo esquema do detalhe da transacao: "detalhe_meta/1795575080587". */
+    const val DETALHE_META = "detalhe_meta/{id}"
+
+    fun detalheMeta(id: Long) = "detalhe_meta/$id"
+
+    /** Reaproveita a tela "Nova meta", ja preenchida. */
+    const val EDITAR_META = "editar_meta/{id}"
+
+    fun editarMeta(id: Long) = "editar_meta/$id"
 }

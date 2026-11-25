@@ -249,6 +249,41 @@ object Repositorio {
         }
     }
 
+    /**
+     * Salva uma meta alterada (editada, ou com dinheiro guardado/retirado).
+     * Logado, o ouvinte do Firestore atualiza a lista; sem login, trocamos
+     * o item da lista na mao.
+     */
+    fun atualizarMeta(meta: Meta) {
+        val uid = uidConectado
+        if (uid != null) {
+            metaRepo.atualizar(uid, meta)
+        } else {
+            val posicao = metas.indexOfFirst { it.id == meta.id }
+            if (posicao >= 0) metas[posicao] = meta
+        }
+    }
+
+    /**
+     * Soma (valor positivo) ou tira (valor negativo) dinheiro da meta.
+     * O coerceAtLeast(0.0) impede que o "economizado" fique negativo
+     * se a pessoa tentar retirar mais do que guardou.
+     */
+    fun movimentarMeta(id: Long, valor: Double) {
+        val meta = buscarMeta(id) ?: return
+        val novoGuardado = (meta.guardado + valor).coerceAtLeast(0.0)
+        atualizarMeta(meta.copy(guardado = novoGuardado))
+    }
+
+    fun removerMeta(id: Long) {
+        val uid = uidConectado
+        if (uid != null) {
+            metaRepo.remover(uid, id)
+        } else {
+            metas.removeAll { it.id == id }
+        }
+    }
+
     fun atualizarPerfil(novo: Perfil) {
         perfil.value = novo                       // aparece na hora
         nomeDoFirestore = novo.nome.takeIf { it.isNotBlank() }

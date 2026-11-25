@@ -33,6 +33,7 @@ import com.example.finansmart.ui.screens.config.PrivacidadeScreen
 import com.example.finansmart.ui.screens.config.SobreScreen
 import com.example.finansmart.ui.screens.dashboard.DashboardScreen
 import com.example.finansmart.ui.screens.login.LoginScreen
+import com.example.finansmart.ui.screens.metas.DetalheMetaScreen
 import com.example.finansmart.ui.screens.metas.MetasScreen
 import com.example.finansmart.ui.screens.metas.NovaMetaScreen
 import com.example.finansmart.ui.screens.relatorios.RelatoriosScreen
@@ -192,6 +193,7 @@ fun FinanSmartNavHost() {
             composable(Rotas.METAS) {
                 MetasScreen(
                     onNovaMeta = { navController.navigate(Rotas.NOVA_META) },
+                    onAbrirMeta = { id -> navController.navigate(Rotas.detalheMeta(id)) },
                     modifier = Modifier.padding(espacoDasAbas).statusBarsPadding()
                 )
             }
@@ -277,6 +279,34 @@ fun FinanSmartNavHost() {
                     transacaoId = id,
                     onVoltar = { navController.popBackStack() },
                     onExcluiu = { navController.popBackStack() }
+                )
+            }
+
+            composable(
+                route = Rotas.EDITAR_META,
+                arguments = listOf(navArgument("id") { type = NavType.LongType })
+            ) { entrada ->
+                val id = entrada.arguments?.getLong("id") ?: 0L
+                // A MESMA tela da "Nova meta", agora recebendo o id.
+                NovaMetaScreen(
+                    metaId = id,
+                    onVoltar = { navController.popBackStack() },
+                    onCriou = { navController.popBackStack() },   // volta ao detalhe
+                    modifier = Modifier.safeDrawingPadding()
+                )
+            }
+
+            composable(
+                route = Rotas.DETALHE_META,
+                arguments = listOf(navArgument("id") { type = NavType.LongType })
+            ) { entrada ->
+                val id = entrada.arguments?.getLong("id") ?: 0L
+                DetalheMetaScreen(
+                    metaId = id,
+                    onVoltar = { navController.popBackStack() },
+                    onEditar = { navController.navigate(Rotas.editarMeta(id)) },
+                    onExcluiu = { navController.popBackStack() },
+                    modifier = Modifier.safeDrawingPadding()
                 )
             }
         }
