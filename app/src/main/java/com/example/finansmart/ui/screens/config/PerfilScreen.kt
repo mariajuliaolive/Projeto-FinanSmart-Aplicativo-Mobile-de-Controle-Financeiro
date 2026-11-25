@@ -96,11 +96,19 @@ fun PerfilScreen(
                     color = c.ink
                 )
                 Spacer(Modifier.height(Dimens.Space12))
+                // Agora vem do Firebase: so e "verificada" quem clicou no
+                // link do e-mail de confirmacao enviado no cadastro.
                 if (perfilAtual.verificada) {
                     Etiqueta(
                         texto = "Conta verificada",
                         corTexto = c.pos,
                         corFundo = c.posSoft
+                    )
+                } else {
+                    Etiqueta(
+                        texto = "E-mail não confirmado",
+                        corTexto = c.neg,
+                        corFundo = c.negSoft
                     )
                 }
             }

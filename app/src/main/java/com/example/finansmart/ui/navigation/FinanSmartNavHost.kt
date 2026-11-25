@@ -62,7 +62,11 @@ fun FinanSmartNavHost() {
     LaunchedEffect(authEstado.usuario) {
         val usuario = authEstado.usuario
         if (usuario != null) {
-            Repositorio.usarContaLogada(nome = usuario.nome, email = usuario.email)
+            Repositorio.usarContaLogada(
+                nome = usuario.nome,
+                email = usuario.email,
+                verificada = usuario.emailVerificado,
+            )
             Repositorio.conectar(usuario.uid)    // passa a usar as transacoes do Firestore
         } else {
             Repositorio.desconectar()            // saiu: para de ouvir e limpa

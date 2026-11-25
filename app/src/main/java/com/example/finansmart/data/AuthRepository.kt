@@ -50,7 +50,29 @@ class AuthRepository(
             .build()
         usuario.updateProfile(perfil).await()
 
+        // Manda o e-mail "confirme seu endereco". Nao esperamos: se falhar,
+        // a conta continua criada normalmente.
+        usuario.sendEmailVerification()
+
         return usuario
+    }
+
+    /**
+     * Pede ao Firebase os dados mais novos do usuario logado. O currentUser
+     * fica guardado no celular -- sem isto, quem confirmou o e-mail ontem
+     * continuaria aparecendo como "nao verificado".
+     */
+    suspend fun recarregar(): FirebaseUser? {
+        auth.currentUser?.reload()?.await()
+        return auth.currentUser
+    }
+
+    /** Grava o nome no perfil do Firebase Auth (o mesmo do cadastro). */
+    fun atualizarNome(nome: String) {
+        val perfil = UserProfileChangeRequest.Builder()
+            .setDisplayName(nome.trim())
+            .build()
+        auth.currentUser?.updateProfile(perfil)
     }
 
     /** Envia o e-mail de "esqueci minha senha". */

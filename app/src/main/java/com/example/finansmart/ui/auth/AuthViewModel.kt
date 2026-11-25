@@ -36,6 +36,7 @@ data class UsuarioLogado(
     val uid: String,
     val nome: String,
     val email: String,
+    val emailVerificado: Boolean,
 )
 
 /** Tudo o que as telas de autenticacao precisam saber para se desenhar. */
@@ -55,6 +56,19 @@ class AuthViewModel(
         AuthUiState(usuario = repositorio.usuarioAtual?.paraUsuarioLogado())
     )
     val estado: StateFlow<AuthUiState> = _estado.asStateFlow()
+
+    init {
+        // Se ja tem alguem logado, busca os dados atualizados (nome,
+        // e-mail verificado) sem travar a abertura do app.
+        if (_estado.value.usuario != null) {
+            viewModelScope.launch {
+                val atualizado = runCatching { repositorio.recarregar() }.getOrNull()
+                if (atualizado != null) {
+                    _estado.update { it.copy(usuario = atualizado.paraUsuarioLogado()) }
+                }
+            }
+        }
+    }
 
     fun entrar(email: String, senha: String) = executar {
         val usuario = repositorio.entrar(email, senha)
@@ -144,4 +158,5 @@ private fun FirebaseUser.paraUsuarioLogado() = UsuarioLogado(
     uid = uid,
     nome = displayName?.takeIf { it.isNotBlank() } ?: "Usuário",
     email = email.orEmpty(),
+    emailVerificado = isEmailVerified,
 )

@@ -51,6 +51,7 @@ object Repositorio {
     private val transacaoRepo = TransacaoRepository()
     private val metaRepo = MetaRepository()
     private val perfilRepo = PerfilRepository()
+    private val authRepo = AuthRepository()
 
     // Escopo das coroutines do Repositorio. Dispatchers.Main: a lista e
     // atualizada na thread da tela, que e onde o Compose espera.
@@ -60,6 +61,10 @@ object Repositorio {
     private var observacaoDasTransacoes: Job? = null
     private var observacaoDasMetas: Job? = null
     private var observacaoDoPerfil: Job? = null
+
+    // Nome salvo no "Meu perfil" (Firestore). Quando existe, ele vence
+    // o nome do login -- mesmo que o login seja atualizado depois.
+    private var nomeDoFirestore: String? = null
 
     /**
      * Chamado quando alguem entra (login, cadastro ou app reaberto).
@@ -103,6 +108,7 @@ object Repositorio {
                 .catch { erro -> Log.e("Repositorio", "Erro ao ler perfil", erro) }
                 .collect { dados ->
                     if (dados != null) {
+                        nomeDoFirestore = dados.nome?.takeIf { it.isNotBlank() }
                         val atual = perfil.value
                         perfil.value = atual.copy(
                             nome = dados.nome?.takeIf { it.isNotBlank() } ?: atual.nome,
@@ -123,6 +129,7 @@ object Repositorio {
         observacaoDoPerfil?.cancel()
         observacaoDoPerfil = null
         uidConectado = null
+        nomeDoFirestore = null
         transacoes.clear()
         metas.clear()
     }
@@ -244,7 +251,11 @@ object Repositorio {
 
     fun atualizarPerfil(novo: Perfil) {
         perfil.value = novo                       // aparece na hora
+        nomeDoFirestore = novo.nome.takeIf { it.isNotBlank() }
         uidConectado?.let { perfilRepo.salvar(it, novo) }   // e fica salvo
+        // Tambem no Firebase Auth: assim, ao reabrir o app, o nome do login
+        // ja e o novo e nao "pisca" o antigo antes do Firestore responder.
+        authRepo.atualizarNome(novo.nome)
     }
 
     /**
@@ -253,8 +264,12 @@ object Repositorio {
      * continuam os de exemplo -- o Firebase Auth nao guarda esses dados
      * (eles irao para o Firestore mais adiante).
      */
-    fun usarContaLogada(nome: String, email: String) {
-        perfil.value = perfil.value.copy(nome = nome, email = email)
+    fun usarContaLogada(nome: String, email: String, verificada: Boolean) {
+        perfil.value = perfil.value.copy(
+            nome = nomeDoFirestore ?: nome,
+            email = email,
+            verificada = verificada,
+        )
     }
 
     /* ---------------- dados de exemplo ---------------- */

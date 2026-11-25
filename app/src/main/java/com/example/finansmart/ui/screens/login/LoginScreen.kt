@@ -33,6 +33,7 @@ fun LoginScreen(
     onEntrar: (email: String, senha: String) -> Unit = { _, _ -> },
     onCriarConta: () -> Unit = {},
     onEsqueciSenha: (email: String) -> Unit = {},
+    onEntrarComGoogle: () -> Unit = {},
     // Vindos do AuthUiState, so para desenhar.
     carregando: Boolean = false,
     erro: String? = null,
@@ -141,11 +142,13 @@ fun LoginScreen(
 
             Spacer(Modifier.height(22.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                BotaoSecundario("🔵 Google", aoClicar = {}, modifier = Modifier.weight(1f))
-                // Não faz sentido esse botão de Face Id
-                BotaoSecundario("🆔 Face ID", aoClicar = {}, modifier = Modifier.weight(1f))
-            }
+            // Face ID saiu: e recurso do iPhone, nao existe no Android.
+            // O Google ocupa a linha toda e usa o logo oficial (ConteudoBotaoGoogle).
+            BotaoSecundario(
+                conteudo = { ConteudoBotaoGoogle() },
+                aoClicar = onEntrarComGoogle,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(Modifier.height(Dimens.Space20))
         }
