@@ -1,5 +1,8 @@
 package com.example.finansmart.ui.auth
 
+import android.app.Activity
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.finansmart.data.AuthRepository
@@ -75,6 +78,12 @@ class AuthViewModel(
         _estado.update { it.copy(usuario = usuario.paraUsuarioLogado()) }
     }
 
+    /** O mesmo "molde" do entrar(): carregando, erro traduzido, vigia navega. */
+    fun entrarComGoogle(activity: Activity) = executar {
+        val usuario = repositorio.entrarComGoogle(activity)
+        _estado.update { it.copy(usuario = usuario.paraUsuarioLogado()) }
+    }
+
     fun criarConta(nome: String, email: String, senha: String) = executar {
         val usuario = repositorio.criarConta(nome, email, senha)
         // O nome acabou de ser gravado; usamos o digitado para nao depender
@@ -134,7 +143,11 @@ class AuthViewModel(
      * ATENCAO a ordem: FirebaseAuthWeakPasswordException e um tipo de
      * FirebaseAuthInvalidCredentialsException, entao precisa vir antes.
      */
-    private fun traduzirErro(e: Exception): String = when (e) {
+    private fun traduzirErro(e: Exception): String? = when (e) {
+        // A pessoa fechou a janela de contas: nao e erro, nao mostra nada.
+        is GetCredentialCancellationException -> null
+        is NoCredentialException ->
+            "Nenhuma conta Google neste celular. Adicione uma nas Configurações do Android."
         is FirebaseAuthWeakPasswordException ->
             "Senha fraca: use pelo menos 6 caracteres."
         is FirebaseAuthUserCollisionException ->

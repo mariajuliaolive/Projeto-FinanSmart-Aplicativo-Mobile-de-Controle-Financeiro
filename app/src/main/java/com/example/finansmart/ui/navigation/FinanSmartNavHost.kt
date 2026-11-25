@@ -10,7 +10,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import android.app.Activity
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -113,6 +115,7 @@ fun FinanSmartNavHost() {
             }
 
             composable(Rotas.LOGIN) {
+                val activity = LocalContext.current as Activity
                 // Mesmo "vigia" do Cadastro: login deu certo -> Dashboard.
                 // Bonus: se o Firebase ja lembra de alguem logado, o usuario
                 // ja existe ao abrir esta tela e o app pula direto para dentro.
@@ -127,6 +130,9 @@ fun FinanSmartNavHost() {
                         navController.navigate(Rotas.CADASTRO)
                     },
                     onEsqueciSenha = { email -> authViewModel.recuperarSenha(email) },
+                    // A janela de contas do Google precisa da Activity, que e
+                    // o "contexto" em que o Compose esta desenhando.
+                    onEntrarComGoogle = { authViewModel.entrarComGoogle(activity) },
                     carregando = authEstado.carregando,
                     erro = authEstado.erro,
                     mensagem = authEstado.mensagem,

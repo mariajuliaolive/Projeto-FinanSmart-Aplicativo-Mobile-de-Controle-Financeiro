@@ -1,6 +1,14 @@
 package com.example.finansmart.data
 
+import android.app.Activity
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import com.example.finansmart.R
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.tasks.await
@@ -73,6 +81,55 @@ class AuthRepository(
             .setDisplayName(nome.trim())
             .build()
         auth.currentUser?.updateProfile(perfil)
+    }
+
+    /*
+     * LOGIN COM GOOGLE, em 3 etapas:
+     *
+     *   1. Credential Manager abre a janela "Escolha uma conta" do Android.
+     *   2. A conta escolhida devolve um ID TOKEN (um "comprovante" assinado
+     *      pelo Google dizendo "esta pessoa e fulana@gmail.com").
+     *   3. Entregamos o token ao Firebase, que cria a conta (na primeira
+     *      vez) ou entra nela -- e a partir dai tudo funciona igual ao
+     *      login por e-mail: mesmo uid, mesmo Firestore.
+     *
+     * Precisa de uma Activity porque a janela de contas e desenhada
+     * por cima da tela do app.
+     */
+    suspend fun entrarComGoogle(activity: Activity): FirebaseUser {
+        // Etapa 1: o que pedir ao Credential Manager.
+        val opcaoGoogle = GetGoogleIdOption.Builder()
+            // false = mostra TODAS as contas Google do celular, nao so as
+            // que ja entraram no app antes (senao, uma conta nova ficaria de fora).
+            .setFilterByAuthorizedAccounts(false)
+            // O ID do cliente WEB (client_type 3 do google-services.json).
+            // O plugin google-services cria esta string sozinho.
+            .setServerClientId(activity.getString(R.string.default_web_client_id))
+            // false = sempre deixa a pessoa escolher, nunca entra sozinho.
+            .setAutoSelectEnabled(false)
+            .build()
+
+        val pedido = GetCredentialRequest.Builder()
+            .addCredentialOption(opcaoGoogle)
+            .build()
+
+        // Abre a janela e espera a pessoa escolher (ou cancelar).
+        val resposta = CredentialManager.create(activity)
+            .getCredential(context = activity, request = pedido)
+
+        // Etapa 2: confere se veio mesmo uma credencial do Google.
+        val credencial = resposta.credential
+        if (credencial !is CustomCredential ||
+            credencial.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+        ) {
+            error("A credencial recebida não é do Google.")
+        }
+        val tokenDoGoogle = GoogleIdTokenCredential.createFrom(credencial.data).idToken
+
+        // Etapa 3: troca o token do Google por uma sessao do Firebase.
+        val credencialFirebase = GoogleAuthProvider.getCredential(tokenDoGoogle, null)
+        return auth.signInWithCredential(credencialFirebase).await().user
+            ?: error("O Firebase não retornou o usuário.")
     }
 
     /** Envia o e-mail de "esqueci minha senha". */
